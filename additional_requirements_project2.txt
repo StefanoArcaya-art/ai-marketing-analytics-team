@@ -1,0 +1,2 @@
+langgraph==0.0.48
+langchain_groq==0.5.0
