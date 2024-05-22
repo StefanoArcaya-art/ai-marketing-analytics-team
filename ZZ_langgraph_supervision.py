@@ -10,6 +10,12 @@ from langchain_core.output_parsers.openai_functions import JsonOutputFunctionsPa
 import operator
 from typing import Annotated, Any, Dict, List, Optional, Sequence, TypedDict
 import functools
+import os
+import yaml
+
+from pprint import pprint
+
+from IPython.display import Image
 
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langgraph.graph import StateGraph, END
@@ -22,6 +28,12 @@ from langchain_experimental.tools import PythonREPLTool
 
 MODEL = "gpt-3.5-turbo"
 
+
+# * API KEYS
+
+os.environ["OPENAI_API_KEY"] = yaml.safe_load(open('../credentials.yml'))['openai']
+
+os.environ["TAVILY_API_KEY"] = yaml.safe_load(open("../credentials.yml"))['tavily']
 
 # * Create tools
 
@@ -56,6 +68,7 @@ def agent_node(state, agent, name):
 # * Create Agent Supervisor
 
 members = ["Researcher", "Coder"]
+
 system_prompt = (
     "You are a supervisor tasked with managing a conversation between the"
     " following workers:  {members}. Given the following user request,"
@@ -107,6 +120,21 @@ supervisor_chain = (
     | JsonOutputFunctionsParser()
 )
 
+# * Research and Code Agents
+
+research_agent = create_agent(llm, [tavily_tool], "You are a web researcher.")
+
+research_node = functools.partial(agent_node, agent=research_agent, name="Researcher")
+
+# NOTE: THIS PERFORMS ARBITRARY CODE EXECUTION. PROCEED WITH CAUTION
+code_agent = create_agent(
+    llm,
+    [python_repl_tool],
+    "You may generate safe python code to analyze data and generate charts using matplotlib.",
+)
+
+code_node = functools.partial(agent_node, agent=code_agent, name="Coder")
+
 # * Construct Graph
 
 # The agent state is the input to each node in the graph
@@ -116,18 +144,6 @@ class AgentState(TypedDict):
     messages: Annotated[Sequence[BaseMessage], operator.add]
     # The 'next' field indicates where to route to next
     next: str
-
-
-research_agent = create_agent(llm, [tavily_tool], "You are a web researcher.")
-research_node = functools.partial(agent_node, agent=research_agent, name="Researcher")
-
-# NOTE: THIS PERFORMS ARBITRARY CODE EXECUTION. PROCEED WITH CAUTION
-code_agent = create_agent(
-    llm,
-    [python_repl_tool],
-    "You may generate safe python code to analyze data and generate charts using matplotlib.",
-)
-code_node = functools.partial(agent_node, agent=code_agent, name="Coder")
 
 workflow = StateGraph(AgentState)
 
@@ -143,12 +159,15 @@ for member in members:
 # which routes to a node or finishes
 conditional_map = {k: k for k in members}
 conditional_map["FINISH"] = END
+
 workflow.add_conditional_edges("supervisor", lambda x: x["next"], conditional_map)
+
 # Finally, add entrypoint
 workflow.set_entry_point("supervisor")
 
 graph = workflow.compile()
 
+Image(graph.get_graph().draw_mermaid_png())
 
 # * Invoke the team
 
@@ -164,10 +183,34 @@ for s in graph.stream(
         print("----")
         
 for s in graph.stream(
-    {"messages": [HumanMessage(content="Write a brief research report on pikas.")]},
-    {"recursion_limit": 100},
+    {"messages": [HumanMessage(content="Write a brief research report on evolution of the Tetris game.")]},
+    {"recursion_limit": 10},
 ):
     if "__end__" not in s:
         print(s)
         print("----")
+
+     
+for s in graph.stream(
+    {"messages": [HumanMessage(content="Create the tetris game in python code and execute it.")]},
+    {"recursion_limit": 10},
+):
+    if "__end__" not in s:
+        print(s)
+        print("----")
+        
+result = graph.invoke(
+    input = {"messages": [HumanMessage(content="Create the tetris game in python code, and return the code.")]},
+    config = {"recursion_limit": 10},
+)
+
+pprint(result)
+
+result['messages']
+
+last_message = result['messages'][-1]
+
+dict(last_message)
+
+pprint(last_message.content)
 
