@@ -27,7 +27,7 @@ from langchain_core.tools import tool
 from langchain_experimental.tools import PythonREPLTool
 
 MODEL = "gpt-3.5-turbo"
-
+# MODEL = "gpt-4o"
 
 # * API KEYS
 
@@ -192,7 +192,7 @@ for s in graph.stream(
 
      
 for s in graph.stream(
-    {"messages": [HumanMessage(content="Create the tetris game in python code and execute it.")]},
+    {"messages": [HumanMessage(content="Create the tetris game in python code, and return the code.")]},
     {"recursion_limit": 10},
 ):
     if "__end__" not in s:
@@ -214,3 +214,27 @@ dict(last_message)
 
 pprint(last_message.content)
 
+       
+result_2 = graph.invoke(
+    input = {"messages": [HumanMessage(content="What is the historical temperature in Pittsburgh over the last 5 years. Plot in a chart.")]},
+    config = {"recursion_limit": 20},
+)
+
+result_2
+
+      
+result_3 = graph.invoke(
+    input = {"messages": [HumanMessage(content="Find the historical prices of SPY for the last 5 years from Yahoo Finance. Plot a line chart of the SPY value over time from the historical prices using python.")]},
+    config = {"recursion_limit": 40},
+)
+
+result_3["messages"][-1].name
+
+pprint(dict(result_3), width=40, compact=True)
+
+for message in result_3['messages']:
+    if message.name:
+        print(f"Name: {message.name}")
+    print(f"Content: {message.content}")
+    print("---")
+    print()
