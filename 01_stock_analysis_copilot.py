@@ -7,24 +7,21 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.output_parsers.openai_functions import JsonOutputFunctionsParser
 
-import operator
-from typing import Annotated, Any, Dict, List, Optional, Sequence, TypedDict
-import functools
-import os
-import yaml
-
-from pprint import pprint
-
-from IPython.display import Image
-
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langgraph.graph import StateGraph, END
 
-from typing import Annotated, List, Tuple, Union
-
 from langchain_community.tools.tavily_search import TavilySearchResults
-from langchain_core.tools import tool
 from langchain_experimental.tools import PythonREPLTool
+
+import operator
+from typing import Annotated, Sequence, TypedDict
+import functools
+import os
+import yaml
+from pprint import pprint
+from IPython.display import Image
+
+
 
 MODEL = "gpt-3.5-turbo"
 # MODEL = "gpt-4o"
