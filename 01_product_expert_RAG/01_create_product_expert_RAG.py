@@ -1,0 +1,229 @@
+
+
+# https://api.python.langchain.com/en/latest/document_loaders/langchain_community.document_loaders.web_base.WebBaseLoader.html
+
+from langchain.document_loaders import WebBaseLoader
+
+from langchain_community.vectorstores import Chroma
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+from langchain_core.runnables import RunnablePassthrough
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+
+import pandas as pd
+import joblib
+import re
+import copy
+import yaml
+import os
+
+from pprint import pprint
+
+# OPENAI API SETUP
+
+os.environ["OPENAI_API_KEY"] = yaml.safe_load(open('../credentials.yml'))['openai']
+
+OPENAI_LLM = 'gpt-3.5-turbo'
+# OPENAI_LLM = 'gpt-4o'
+
+
+
+# * Test out loading a single webpage
+
+url = "https://university.business-science.io/p/4-course-bundle-machine-learning-and-web-applications-r-track-101-102-201-202a"
+
+# Create a document loader for the website
+loader = WebBaseLoader(url)
+
+# Load the data from the website
+documents = loader.load()
+
+pprint(documents[0].page_content)
+
+
+# * Load All Webpages
+
+df = pd.read_csv("01_product_expert_RAG/data/products.csv")
+
+df['website']
+
+loader = WebBaseLoader(df['website'].tolist())
+
+documents = loader.load()
+
+documents[1].metadata
+
+len(documents[1].page_content)
+
+joblib.dump(documents, "01_product_expert_RAG/data/products.pkl")
+
+joblib.load("01_product_expert_RAG/data/products.pkl")
+
+
+
+# * Clean the Beautiful Soup Page Content
+
+def clean_text(text):
+    # Replace multiple newlines and spaces with a single space
+    text = re.sub(r'\n+', '\n', text)  # Replace multiple newlines with a single newline
+    text = re.sub(r'\s+', ' ', text)  # Replace multiple spaces with a single space
+
+    # Remove non-content sections (e.g., navigation, footer)
+    # Example regex patterns to match sections that you want to remove
+    text = re.sub(r'Toggle navigation.*?Business Science', '', text, flags=re.DOTALL)
+    text = re.sub(r'© Business Science University.*', '', text, flags=re.DOTALL)
+
+    # Replace encoded characters
+    text = text.replace('\xa0', ' ')
+    text = text.replace('ðŸŽ‰', '')  # Remove specific encoded characters
+
+    # Extract relevant content
+    relevant_content = []
+    lines = text.split('\n')
+    for line in lines:
+        if any(keyword in line for keyword in ["Enroll in Course", "data scientist", "promotion", "salary", "testimonial"]):
+            relevant_content.append(line.strip())
+
+    # Join the relevant content back into a single string
+    cleaned_text = '\n'.join(relevant_content)
+
+    return cleaned_text
+
+# Test cleaning a single document
+
+pprint(documents[1].page_content)
+
+pprint(clean_text(documents[1].page_content))
+
+# Clean all documents
+
+documents_clean = copy.deepcopy(documents)
+
+for document in documents_clean:
+    document.page_content = clean_text(document.page_content)
+    
+documents_clean
+
+# Assess Length
+
+for document in documents_clean:
+    print(document.metadata)
+    print(len(document.page_content))
+    print("---")
+
+# * Chunk into 500-1000 using Recursive Splitter
+
+CHUNK_SIZE = 1000
+
+text_splitter_recursive = RecursiveCharacterTextSplitter(
+    chunk_size = CHUNK_SIZE,
+    chunk_overlap=100,
+)
+
+documents_clean_recursive = text_splitter_recursive.split_documents(documents_clean)
+
+documents_clean_recursive
+
+len(documents_clean_recursive)
+
+# * Text Embeddings
+
+# OpenAI Embeddings
+# - See Account Limits for models: https://platform.openai.com/account/limits
+# - See billing to add to your credit balance: https://platform.openai.com/account/billing/overview
+
+embedding_function = OpenAIEmbeddings(
+    model='text-embedding-ada-002',
+)
+
+vectorstore = Chroma.from_documents(
+    documents_clean_recursive, 
+    embedding=embedding_function, 
+    persist_directory="01_product_expert_RAG/data/products_recursive.db"
+)
+
+vectorstore
+
+vectorstore.similarity_search("Is the 4-Course R-Track Open for Enrollment?", k = 4)
+
+
+retriever = vectorstore.as_retriever()
+
+retriever
+
+
+vectorstore_2 = Chroma.from_documents(
+    documents_clean, 
+    embedding=embedding_function, 
+    persist_directory="01_product_expert_RAG/data/products_clean.db"
+)
+
+retriever_2 = vectorstore_2.as_retriever()
+
+# * Prompt template 
+
+template = """Answer the question based only on the following context:
+{context}
+
+Question: {question}
+"""
+
+prompt = ChatPromptTemplate.from_template(template)
+
+# * LLM Specification
+
+model = ChatOpenAI(
+    model = OPENAI_LLM,
+    temperature = 0.7,
+)
+
+# * RAG Chain
+
+# * Test 1: With Recursive Chunking
+
+rag_chain = (
+    {"context": retriever, "question": RunnablePassthrough()}
+    | prompt
+    | model
+    | StrOutputParser()
+)
+
+result = rag_chain.invoke("Is the 4-Course R-Track Open for Enrollment?")
+
+pprint(result)
+
+# * Test 2: With No Chunking
+
+rag_chain_2 = (
+    {"context": retriever_2, "question": RunnablePassthrough()}
+    | prompt
+    | model
+    | StrOutputParser()
+)
+
+result = rag_chain_2.invoke("Is the 4-Course R-Track Open for Enrollment?")
+
+pprint(result)
+
+
+result = rag_chain_2.invoke("What courses are included in the 5-Course R Track?")
+
+pprint(result)
+
+result = rag_chain_2.invoke("What courses are included in the 4-Course R Track?")
+
+pprint(result)
+
+# * Had to switch to GPT 4o 
+# BadRequestError: Error code: 400 - {'error': {'message': "This model's maximum context length is 16385 tokens. However, your messages resulted in 23340 tokens. Please reduce the length of the messages.", 'type': 'invalid_request_error', 'param': 'messages', 'code': 'context_length_exceeded'}}
+
+result = rag_chain_2.invoke("What is Learning Labs PRO?")
+
+pprint(result)
+
+# CONCLUSIONS:
+# - My choice is to go with products_clean.db Vector Database in Production
+# - The Non-Chunked LLM quickly discovered that the 4-course R-Track was closed for enrollment
+# - One downside to this approach is that gpt-3.5-turbo will sometimes cause error due to length of tokens
