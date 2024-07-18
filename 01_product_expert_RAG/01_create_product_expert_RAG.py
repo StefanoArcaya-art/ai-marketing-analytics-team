@@ -1,5 +1,7 @@
 
 
+# GOAL: Make a product expert AI agent
+
 # https://api.python.langchain.com/en/latest/document_loaders/langchain_community.document_loaders.web_base.WebBaseLoader.html
 
 from langchain.document_loaders import WebBaseLoader
@@ -44,6 +46,7 @@ pprint(documents[0].page_content)
 
 
 # * Load All Webpages
+#   This will take a minute
 
 df = pd.read_csv("01_product_expert_RAG/data/products.csv")
 
@@ -57,7 +60,7 @@ documents[1].metadata
 
 len(documents[1].page_content)
 
-joblib.dump(documents, "01_product_expert_RAG/data/products.pkl")
+# joblib.dump(documents, "01_product_expert_RAG/data/products.pkl")
 
 joblib.load("01_product_expert_RAG/data/products.pkl")
 
@@ -66,18 +69,16 @@ joblib.load("01_product_expert_RAG/data/products.pkl")
 # * Clean the Beautiful Soup Page Content
 
 def clean_text(text):
-    # Replace multiple newlines and spaces with a single space
-    text = re.sub(r'\n+', '\n', text)  # Replace multiple newlines with a single newline
-    text = re.sub(r'\s+', ' ', text)  # Replace multiple spaces with a single space
 
-    # Remove non-content sections (e.g., navigation, footer)
-    # Example regex patterns to match sections that you want to remove
+    text = re.sub(r'\n+', '\n', text) 
+    text = re.sub(r'\s+', ' ', text)  
+
     text = re.sub(r'Toggle navigation.*?Business Science', '', text, flags=re.DOTALL)
     text = re.sub(r'© Business Science University.*', '', text, flags=re.DOTALL)
 
     # Replace encoded characters
     text = text.replace('\xa0', ' ')
-    text = text.replace('ðŸŽ‰', '')  # Remove specific encoded characters
+    text = text.replace('ðŸŽ‰', '')  
 
     # Extract relevant content
     relevant_content = []
@@ -107,6 +108,7 @@ for document in documents_clean:
 documents_clean
 
 # Assess Length
+#  Note - GPT 3.5 can only handle so much text; May need to switch over to GPT-4o to handle larger tokens
 
 for document in documents_clean:
     print(document.metadata)
@@ -138,27 +140,46 @@ embedding_function = OpenAIEmbeddings(
     model='text-embedding-ada-002',
 )
 
-vectorstore = Chroma.from_documents(
+# ** Vector Store - Recursively Split Documents
+
+# Create the Vector Store (Run 1st Time)
+vectorstore_1 = Chroma.from_documents(
     documents_clean_recursive, 
     embedding=embedding_function, 
     persist_directory="01_product_expert_RAG/data/products_recursive.db"
 )
 
-vectorstore
+# Connect to the Vector Store (Run all other times)
+vectorstore_1 = Chroma(
+    embedding_function=embedding_function, 
+    persist_directory="01_product_expert_RAG/data/products_recursive.db"
+)
 
-vectorstore.similarity_search("Is the 4-Course R-Track Open for Enrollment?", k = 4)
+vectorstore_1
+
+vectorstore_1.similarity_search("Is the 4-Course R-Track Open for Enrollment?", k = 4)
 
 
-retriever = vectorstore.as_retriever()
+retriever_1 = vectorstore_1.as_retriever()
 
-retriever
+retriever_1
 
+# ** Vector Store - Complete (Large) Documents
 
+# Create the Vector Store (Run 1st Time)
 vectorstore_2 = Chroma.from_documents(
     documents_clean, 
     embedding=embedding_function, 
     persist_directory="01_product_expert_RAG/data/products_clean.db"
 )
+
+# Connect to the Vector Store (Run all other times)
+vectorstore_2 = Chroma(
+    embedding_function=embedding_function, 
+    persist_directory="01_product_expert_RAG/data/products_clean.db"
+)
+
+vectorstore_2
 
 retriever_2 = vectorstore_2.as_retriever()
 
@@ -183,14 +204,14 @@ model = ChatOpenAI(
 
 # * Test 1: With Recursive Chunking
 
-rag_chain = (
-    {"context": retriever, "question": RunnablePassthrough()}
+rag_chain_1 = (
+    {"context": retriever_1, "question": RunnablePassthrough()}
     | prompt
     | model
     | StrOutputParser()
 )
 
-result = rag_chain.invoke("Is the 4-Course R-Track Open for Enrollment?")
+result = rag_chain_1.invoke("Is the 4-Course R-Track Open for Enrollment?")
 
 pprint(result)
 
