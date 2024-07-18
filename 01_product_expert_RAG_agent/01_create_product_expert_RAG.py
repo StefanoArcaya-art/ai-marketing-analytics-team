@@ -48,7 +48,7 @@ pprint(documents[0].page_content)
 # * Load All Webpages
 #   This will take a minute
 
-df = pd.read_csv("01_product_expert_RAG/data/products.csv")
+df = pd.read_csv("01_product_expert_RAG_agent/data/products.csv")
 
 df['website']
 
@@ -60,9 +60,9 @@ documents[1].metadata
 
 len(documents[1].page_content)
 
-# joblib.dump(documents, "01_product_expert_RAG/data/products.pkl")
+# joblib.dump(documents, "01_product_expert_RAG_agent/data/products.pkl")
 
-joblib.load("01_product_expert_RAG/data/products.pkl")
+joblib.load("01_product_expert_RAG_agent/data/products.pkl")
 
 
 
@@ -146,13 +146,13 @@ embedding_function = OpenAIEmbeddings(
 vectorstore_1 = Chroma.from_documents(
     documents_clean_recursive, 
     embedding=embedding_function, 
-    persist_directory="01_product_expert_RAG/data/products_recursive.db"
+    persist_directory="01_product_expert_RAG_agent/data/products_recursive.db"
 )
 
 # Connect to the Vector Store (Run all other times)
 vectorstore_1 = Chroma(
     embedding_function=embedding_function, 
-    persist_directory="01_product_expert_RAG/data/products_recursive.db"
+    persist_directory="01_product_expert_RAG_agent/data/products_recursive.db"
 )
 
 vectorstore_1
@@ -170,13 +170,13 @@ retriever_1
 vectorstore_2 = Chroma.from_documents(
     documents_clean, 
     embedding=embedding_function, 
-    persist_directory="01_product_expert_RAG/data/products_clean.db"
+    persist_directory="01_product_expert_RAG_agent/data/products_clean.db"
 )
 
 # Connect to the Vector Store (Run all other times)
 vectorstore_2 = Chroma(
     embedding_function=embedding_function, 
-    persist_directory="01_product_expert_RAG/data/products_clean.db"
+    persist_directory="01_product_expert_RAG_agent/data/products_clean.db"
 )
 
 vectorstore_2
