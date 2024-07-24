@@ -1,8 +1,11 @@
-
+# BUSINESS SCIENCE UNIVERSITY
+# PYTHON FOR GENERATIVE AI COURSE
+# MULTI-AGENTS (AGENTIAL SUPERVISION)
+# ***
 
 # GOAL: Make a product expert AI agent
 
-# https://api.python.langchain.com/en/latest/document_loaders/langchain_community.document_loaders.web_base.WebBaseLoader.html
+# LIBRARIES
 
 from langchain.document_loaders import WebBaseLoader
 
@@ -27,12 +30,13 @@ from pprint import pprint
 
 os.environ["OPENAI_API_KEY"] = yaml.safe_load(open('../credentials.yml'))['openai']
 
-OPENAI_LLM = 'gpt-3.5-turbo'
+OPENAI_LLM = 'gpt-4o-mini'
+# OPENAI_LLM = 'gpt-3.5-turbo'
 # OPENAI_LLM = 'gpt-4o'
 
 
-
 # * Test out loading a single webpage
+#   Resource: https://api.python.langchain.com/en/latest/document_loaders/langchain_community.document_loaders.web_base.WebBaseLoader.html
 
 url = "https://university.business-science.io/p/4-course-bundle-machine-learning-and-web-applications-r-track-101-102-201-202a"
 
@@ -62,8 +66,7 @@ len(documents[1].page_content)
 
 # joblib.dump(documents, "01_product_expert_RAG_agent/data/products.pkl")
 
-joblib.load("01_product_expert_RAG_agent/data/products.pkl")
-
+documents = joblib.load("01_product_expert_RAG_agent/data/products.pkl")
 
 
 # * Clean the Beautiful Soup Page Content
@@ -98,6 +101,9 @@ pprint(documents[1].page_content)
 
 pprint(clean_text(documents[1].page_content))
 
+pprint(clean_text(documents[0].page_content))
+
+
 # Clean all documents
 
 documents_clean = copy.deepcopy(documents)
@@ -131,7 +137,6 @@ documents_clean_recursive
 len(documents_clean_recursive)
 
 # * Text Embeddings
-
 # OpenAI Embeddings
 # - See Account Limits for models: https://platform.openai.com/account/limits
 # - See billing to add to your credit balance: https://platform.openai.com/account/billing/overview
@@ -143,11 +148,11 @@ embedding_function = OpenAIEmbeddings(
 # ** Vector Store - Recursively Split Documents
 
 # Create the Vector Store (Run 1st Time)
-vectorstore_1 = Chroma.from_documents(
-    documents_clean_recursive, 
-    embedding=embedding_function, 
-    persist_directory="01_product_expert_RAG_agent/data/products_recursive.db"
-)
+# vectorstore_1 = Chroma.from_documents(
+#     documents_clean_recursive, 
+#     embedding=embedding_function, 
+#     persist_directory="01_product_expert_RAG_agent/data/products_recursive.db"
+# )
 
 # Connect to the Vector Store (Run all other times)
 vectorstore_1 = Chroma(
@@ -167,11 +172,11 @@ retriever_1
 # ** Vector Store - Complete (Large) Documents
 
 # Create the Vector Store (Run 1st Time)
-vectorstore_2 = Chroma.from_documents(
-    documents_clean, 
-    embedding=embedding_function, 
-    persist_directory="01_product_expert_RAG_agent/data/products_clean.db"
-)
+# vectorstore_2 = Chroma.from_documents(
+#     documents_clean, 
+#     embedding=embedding_function, 
+#     persist_directory="01_product_expert_RAG_agent/data/products_clean.db"
+# )
 
 # Connect to the Vector Store (Run all other times)
 vectorstore_2 = Chroma(
@@ -237,7 +242,7 @@ result = rag_chain_2.invoke("What courses are included in the 4-Course R Track?"
 
 pprint(result)
 
-# * Had to switch to GPT 4o 
+# * NOTE: Switched from gpt-3.5-turbo to gpt-4o-mini due to token length issue (caused Error Code 400)
 # BadRequestError: Error code: 400 - {'error': {'message': "This model's maximum context length is 16385 tokens. However, your messages resulted in 23340 tokens. Please reduce the length of the messages.", 'type': 'invalid_request_error', 'param': 'messages', 'code': 'context_length_exceeded'}}
 
 result = rag_chain_2.invoke("What is Learning Labs PRO?")
@@ -248,3 +253,4 @@ pprint(result)
 # - My choice is to go with products_clean.db Vector Database in Production
 # - The Non-Chunked LLM quickly discovered that the 4-course R-Track was closed for enrollment
 # - One downside to this approach is that gpt-3.5-turbo will sometimes cause error due to length of tokens
+# - Solution was to switch to the gpt-4o-mini
