@@ -233,7 +233,7 @@ for message in result_3['messages']:
     
   
 result_4 = graph.invoke(
-    input = {"messages": [HumanMessage(content="Find the historical prices of NVDA and VIX for the last 5 years from Yahoo Finance (feel free to use the yfinance library, which is installed). Plot a daily line chart of the value over time from the historical prices using python and the plotly library. Organize the plots by using 1 column by 2 row subplots so that the dates line up and VIX is the first plot and NVDA is below. Make sure the end date used is '2024-07-24'. Add a dateslider.")]},
+    input = {"messages": [HumanMessage(content="Find the historical prices of NVDA and VIX for the last 1 year from Yahoo Finance (feel free to use the yfinance library, which is installed). Plot a daily line chart of the value over time from the historical prices using python and the plotly library. Organize the plots by using 1 column by 2 row subplots so that the dates line up and VIX is the first plot and NVDA is below. Make sure the end date used is '2024-07-24'")]},
     config = {"recursion_limit": 10},
 )  
 
