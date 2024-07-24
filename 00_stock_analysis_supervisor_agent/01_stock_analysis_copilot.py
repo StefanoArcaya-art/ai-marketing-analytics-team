@@ -213,8 +213,8 @@ Image(graph.get_graph().draw_mermaid_png())
 
       
 result_3 = graph.invoke(
-    input = {"messages": [HumanMessage(content="Find the historical prices of SPY for the last 5 years from Yahoo Finance (feel free to use the yfinance library, which is installed). Plot a daily line chart of the SPY value over time from the historical prices using python.")]},
-    config = {"recursion_limit": 40},
+    input = {"messages": [HumanMessage(content="Find the historical prices of SPY for the last 5 years from Yahoo Finance (feel free to use the yfinance library, which is installed). Plot a daily line chart of the SPY value over time from the historical prices using python and the plotly library. Add a 50-day and 200-day simple moving average.")]},
+    config = {"recursion_limit": 10},
 )
 
 pprint(dict(result_3), width=40, compact=True)
