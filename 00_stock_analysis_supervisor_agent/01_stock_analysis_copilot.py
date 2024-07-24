@@ -1,6 +1,7 @@
 
 
-# will recommend to use the yfinance library
+# NOTE: requires yfinance to get the SPY data
+# NOTE: Requires Tavily API Key for Web Search (add to credentials.yml file)
 
 from langchain.agents import AgentExecutor, create_openai_tools_agent
 from langchain_core.messages import BaseMessage, HumanMessage
@@ -44,29 +45,6 @@ tavily_tool = TavilySearchResults(max_results=5)
 
 python_repl_tool = PythonREPLTool()
 
-# * Helper Utilities
-
-def create_agent(llm: ChatOpenAI, tools: list, system_prompt: str):
-    # Each worker node will be given a name and some tools.
-    prompt = ChatPromptTemplate.from_messages(
-        [
-            (
-                "system",
-                system_prompt,
-            ),
-            MessagesPlaceholder(variable_name="messages"),
-            MessagesPlaceholder(variable_name="agent_scratchpad"),
-        ]
-    )
-    agent = create_openai_tools_agent(llm, tools, prompt)
-    executor = AgentExecutor(agent=agent, tools=tools)
-    return executor
-
-def agent_node(state, agent, name):
-    result = agent.invoke(state)
-    return {"messages": [HumanMessage(content=result["output"], name=name)]}
-
-
 # * Create Agent Supervisor
 
 subagent_names = ["Researcher", "Coder"]
@@ -81,7 +59,8 @@ system_prompt = (
 
 # Our team supervisor is an LLM node. It just picks the next agent to process and decides when the work is completed
 
-route_options = ["FINISH"] + subagent_names # ['FINISH', 'Researcher', 'Coder']
+# ['FINISH', 'Researcher', 'Coder']
+route_options = ["FINISH"] + subagent_names 
 
 # Using openai function calling can make output parsing easier for us
 #  References: 
@@ -128,16 +107,41 @@ supervisor_chain = (
     | JsonOutputFunctionsParser()
 )
 
+supervisor_chain
+
+# * SUBAGENTS
+
+def create_agent(llm: ChatOpenAI, tools: list, system_prompt: str):
+    # Each worker node will be given a name and some tools.
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            (
+                "system",
+                system_prompt,
+            ),
+            MessagesPlaceholder(variable_name="messages"),
+            MessagesPlaceholder(variable_name="agent_scratchpad"),
+        ]
+    )
+    agent = create_openai_tools_agent(llm, tools, prompt)
+    executor = AgentExecutor(agent=agent, tools=tools)
+    return executor
+
+
 # * Research Agent
 
-research_agent = create_agent(llm, [tavily_tool], "You are a web researcher.")
+researcher_agent = create_agent(
+    llm, 
+    [tavily_tool], 
+    "You are a web researcher."
+)
 
 # * Code Agent
 
-code_agent = create_agent(
+coder_agent = create_agent(
     llm,
     [python_repl_tool],
-    "You may generate safe python code to analyze data and generate charts using matplotlib.",
+    "You may generate safe python code to analyze data and generate charts using Plotly. Please share the specific details of the Python code in your reponse using ```python ``` markdown. Please make sure to use the plotly library.",
 )
 
 
@@ -146,25 +150,54 @@ code_agent = create_agent(
 
 class GraphState(TypedDict):
     messages: Annotated[Sequence[BaseMessage], operator.add]
+    num_steps : int
     next: str
     
-research_node = functools.partial(agent_node, agent=research_agent, name="Researcher")
+    
+def supervisor_node(state):
+    
+    return supervisor_chain
 
-code_node = functools.partial(agent_node, agent=code_agent, name="Coder")
+def research_node(state):
+    
+    result = researcher_agent.invoke(state)
+    
+    return {"messages": [HumanMessage(content=result["output"], name="Researcher")]}
 
+def coder_node(state):
+    
+    result = coder_agent.invoke(state)
+    
+    return {"messages": [HumanMessage(content=result["output"], name="Coder")]}
 
+  
+# def state_printer(state):
+#     """print the state"""
+#     print("---STATE PRINTER---")
+#     print(f"Messages: {state['messages']}")
+#     print(f"Formatted Question (SQL): {state['formatted_user_question_sql_only']}")
+#     print(f"SQL Query: \n{state['sql_query']}\n")
+#     print(f"Data: \n{pd.DataFrame(state['data'])}\n")
+#     print(f"Chart or Table: {state['routing_preprocessor_decision']}")
+    
+#     if state['routing_preprocessor_decision'] == "chart":
+#         print(f"Chart Code: \n{pprint(state['chart_plotly_code'])}")
+#         print(f"Chart Error: {state['chart_plotly_error']}")
+    
+#     print(f"Num Steps: {state['num_steps']}")
+
+# * WORKFLOW DAG
 
 workflow = StateGraph(GraphState)
 
 workflow.add_node("Researcher", research_node)
-workflow.add_node("Coder", code_node)
-workflow.add_node("supervisor", supervisor_chain)
+workflow.add_node("Coder", coder_node)
+workflow.add_node("supervisor", supervisor_node)
 
 for member in subagent_names:
     workflow.add_edge(member, "supervisor")
     
-conditional_map = {'Researcher': 'Researcher', 'Coder': 'Coder'}
-conditional_map["FINISH"] = END
+conditional_map = {'Researcher': 'Researcher', 'Coder': 'Coder', 'FINISH': END}
 
 workflow.add_conditional_edges("supervisor", lambda x: x["next"], conditional_map)
 
