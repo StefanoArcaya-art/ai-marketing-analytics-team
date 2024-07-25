@@ -218,16 +218,16 @@ workflow.add_conditional_edges("supervisor", lambda x: x["next"], conditional_ma
 workflow.set_entry_point("supervisor")
 
 # * NEW: ADD CHECKPOINTER MEMORY
-graph = workflow.compile(checkpointer=memory)
+app = workflow.compile(checkpointer=memory)
 
-Image(graph.get_graph().draw_mermaid_png())
+Image(app.get_graph().draw_mermaid_png())
 
 
 
 # * TESTING THE STOCK ANALYSIS COPILOT
 
       
-result_3 = graph.invoke(
+result_3 = app.invoke(
     input = {"messages": [HumanMessage(content="Find the historical prices of SPY for the last 5 years from Yahoo Finance (feel free to use the yfinance library, which is installed). Plot a daily line chart of the SPY value over time from the historical prices using python and the plotly library. Add a 50-day and 200-day simple moving average. Make sure the end date used is '2024-07-24'. Add a dateslider.")]},
     
     # * NEW: Add thread_id
@@ -243,7 +243,7 @@ for message in result_3['messages']:
     print("---")
     print()
     
-graph.invoke(
+app.invoke(
     input = {"messages": [HumanMessage(content="Reproduce the last plot")]},
     
     # * NEW: Add thread_id
@@ -252,9 +252,8 @@ graph.invoke(
         "configurable": {"thread_id": "1"}
     },
 )
-    
   
-result_4 = graph.invoke(
+result_4 = app.invoke(
     input = {"messages": [HumanMessage(content="Find the historical prices of NVDA and VIX for the last 1 year from Yahoo Finance (feel free to use the yfinance library, which is installed). Plot a daily line chart of the value over time from the historical prices using python and the plotly library. Organize the plots by using 1 column by 2 row subplots so that the dates line up and VIX is the first plot and NVDA is below. Make sure the end date used is '2024-07-24'")]},
     
     config = {
@@ -271,3 +270,14 @@ for message in result_4['messages']:
     print(f"Content: {message.content}")
     print("---")
     print()
+
+
+# * NEW: Working with messages from the database (checkpointer)
+
+config = {"configurable": {"thread_id": "1"}}
+
+app.get_state(config).values
+
+messages = app.get_state(config).values["messages"]
+messages
+
