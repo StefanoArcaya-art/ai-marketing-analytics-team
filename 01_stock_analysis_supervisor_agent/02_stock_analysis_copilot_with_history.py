@@ -3,12 +3,15 @@
 # MULTI-AGENTS (AGENTIAL SUPERVISION)
 # ***
 
-# Goal: Demonstrate a simple example of Supervision with a team of agents
+# Goal: Add chat memory so workers know what's been done previously (Checkpointing with SqliteSaver)
 
 # NOTE: requires yfinance to get the SPY data
 # NOTE: Requires Tavily API Key for Web Search (add to credentials.yml file)
 
 # * LIBRARIES
+
+# * NEW: Used for conversation memory
+from langgraph.checkpoint.sqlite import SqliteSaver
 
 from langchain.agents import AgentExecutor, create_openai_tools_agent
 from langchain_core.messages import BaseMessage, HumanMessage
@@ -35,6 +38,10 @@ from typing import Annotated, Sequence, TypedDict
 from pprint import pprint
 from IPython.display import Image
 
+# * MEMORY SETUP
+# - We can have either a database on server or a JIT "in-memory" database
+
+memory = SqliteSaver.from_conn_string(":memory:")
 
 # * LLM SELECTION
 
@@ -210,7 +217,8 @@ workflow.add_conditional_edges("supervisor", lambda x: x["next"], conditional_ma
 
 workflow.set_entry_point("supervisor")
 
-graph = workflow.compile()
+# * NEW: ADD CHECKPOINTER MEMORY
+graph = workflow.compile(checkpointer=memory)
 
 Image(graph.get_graph().draw_mermaid_png())
 
@@ -221,7 +229,9 @@ Image(graph.get_graph().draw_mermaid_png())
       
 result_3 = graph.invoke(
     input = {"messages": [HumanMessage(content="Find the historical prices of SPY for the last 5 years from Yahoo Finance (feel free to use the yfinance library, which is installed). Plot a daily line chart of the SPY value over time from the historical prices using python and the plotly library. Add a 50-day and 200-day simple moving average. Make sure the end date used is '2024-07-24'. Add a dateslider.")]},
-    config = {"recursion_limit": 10},
+    
+    # * NEW: Add thread_id
+    config = {"recursion_limit": 10, "configurable": {"thread_id": "1"}},
 )
 
 result_3
@@ -233,10 +243,24 @@ for message in result_3['messages']:
     print("---")
     print()
     
+graph.invoke(
+    input = {"messages": [HumanMessage(content="Reproduce the last plot")]},
+    
+    # * NEW: Add thread_id
+    config = {
+        "recursion_limit": 10, 
+        "configurable": {"thread_id": "1"}
+    },
+)
+    
   
 result_4 = graph.invoke(
     input = {"messages": [HumanMessage(content="Find the historical prices of NVDA and VIX for the last 1 year from Yahoo Finance (feel free to use the yfinance library, which is installed). Plot a daily line chart of the value over time from the historical prices using python and the plotly library. Organize the plots by using 1 column by 2 row subplots so that the dates line up and VIX is the first plot and NVDA is below. Make sure the end date used is '2024-07-24'")]},
-    config = {"recursion_limit": 10},
+    
+    config = {
+        "recursion_limit": 10, 
+        "configurable": {"thread_id": "1"}
+    },
 )  
 
 result_4
