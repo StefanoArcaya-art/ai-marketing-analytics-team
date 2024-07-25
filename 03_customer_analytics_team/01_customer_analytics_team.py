@@ -12,6 +12,10 @@ from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
 
 from langchain.agents import AgentExecutor, create_vectorstore_agent, create_openapi_agent
 
+from langchain.chains import create_retrieval_chain
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain.chains import create_history_aware_retriever
+
 from langgraph.graph import StateGraph, END
 
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
@@ -101,6 +105,7 @@ result = supervisor_agent.invoke({"messages": [HumanMessage(content="Is the 4-Co
 
 result
 
+
 # *** PRODUCTS EXPERT RAG AGENT ****
 
 def create_rag_agent(db_path, llm, temperature = 0):
@@ -109,16 +114,42 @@ def create_rag_agent(db_path, llm, temperature = 0):
         model='text-embedding-ada-002',
     )
     
-    model = llm
-    
-    model.temperature = temperature
+    llm.temperature = temperature
     
     vectorstore_2 = Chroma(
         embedding_function=embedding_function, 
         persist_directory=db_path
     )
 
-    retriever_2 = vectorstore_2.as_retriever()
+    retriever = vectorstore_2.as_retriever()
+    
+    contextualize_q_system_prompt = """Given a chat history and the latest user question \
+    which might reference context in the chat history, formulate a standalone question \
+    which can be understood without the chat history. Do NOT answer the question, \
+    just reformulate it if needed and otherwise return it as is."""
+    
+    contextualize_q_prompt = ChatPromptTemplate.from_messages([
+        ("system", contextualize_q_system_prompt),
+        MessagesPlaceholder("chat_history"),
+        ("human", "{input}"),
+    ])
+    
+    history_aware_retriever = create_history_aware_retriever(llm, retriever, contextualize_q_prompt)
+    
+    qa_system_prompt = """You are an assistant for question-answering tasks. \
+    Use the following pieces of retrieved context to answer the question. \
+    If you don't know the answer, just say that you don't know. \
+
+    {context}"""
+    
+    qa_prompt = ChatPromptTemplate.from_messages([
+        ("system", qa_system_prompt),
+        MessagesPlaceholder("chat_history"),
+        ("human", "{input}")
+    ])
+    
+    question_answer_chain = create_stuff_documents_chain(llm, qa_prompt)
+    
 
     prompt = ChatPromptTemplate.from_template(
         """Answer the question based only on the following context:
@@ -127,23 +158,19 @@ def create_rag_agent(db_path, llm, temperature = 0):
         Question: {question}
         """
     )
-
-    rag_chain = (
-        {"context": retriever_2, "question": RunnablePassthrough()}
-        | prompt
-        | model
-        | StrOutputParser()
-    )
+    
+    rag_chain = create_retrieval_chain(history_aware_retriever, question_answer_chain)
     
     return rag_chain
 
 
 product_expert_agent = create_rag_agent(PATH_PRODUCTS_VECTORDB, llm=OPENAI_LLM, temperature=0.7)
 
-result = product_expert_agent.invoke(input="Is the 4-Course R-Track Open for Enrollment?")
+result = product_expert_agent.invoke({"input": "Is the 4-Course R-Track Open for Enrollment?", "chat_history": [HumanMessage(content="Is the 4-Course R-Track Open for Enrollment?")]})
+
 result
 
-
+result['answer']
 
 # * LANGGRAPH
 
@@ -151,6 +178,14 @@ class GraphState(TypedDict):
     messages: Annotated[Sequence[BaseMessage], operator.add]
     num_steps: Annotated[Sequence[int], operator.add]
     next: str
+    
+# Helper function to get last question that the Human asked
+def get_last_human_message(msgs):
+    # Iterate through the list in reverse order
+    for msg in reversed(msgs):
+        if isinstance(msg, HumanMessage):
+            return msg
+    return None
     
     
 def supervisor_node(state):
@@ -166,14 +201,20 @@ def product_expert_node(state):
     
     print(state["messages"])
     
-    result = product_expert_agent.invoke(state.get("messages")[-1].content)
+    messages = state.get("messages")
+    
+    last_question = get_last_human_message(messages)
+    if last_question:
+        last_question = last_question.content
+    
+    result = product_expert_agent.invoke({"input": last_question, "chat_history": messages})
     
     print(result)
     
     # result = 'No, the 4-Course R-Track is closed for enrollment.'
     
     return {
-        "messages": [AIMessage(content=result, name='Product_Expert')],
+        "messages": [AIMessage(content=result['answer'], name='Product_Expert')],
         'num_steps': 1
     }
     
