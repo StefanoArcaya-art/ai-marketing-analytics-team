@@ -168,6 +168,8 @@ def product_expert_node(state):
     
     result = product_expert_agent.invoke(state.get("messages")[-1].content)
     
+    print(result)
+    
     # result = 'No, the 4-Course R-Track is closed for enrollment.'
     
     return {
