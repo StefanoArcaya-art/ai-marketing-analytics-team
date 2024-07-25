@@ -100,7 +100,7 @@ PATH_DB = "sqlite:///data/database-sql-transactions/leads_scored.db"
 db = SQLDatabase.from_uri(PATH_DB)
 
 
-# NEW: SQL Parser for output standardization  
+# SQL Parser for output standardization  
 
 def extract_sql_code(text):
     sql_code_match = re.search(r'```sql(.*?)```', text, re.DOTALL)
@@ -175,7 +175,7 @@ conn = sql_engine.connect()
 
 # * Chart Instructor Agent
 
-# NEW: Creates new instructions specifically for the Chart Generator Agent from the User Question
+# Creates new instructions specifically for the Chart Generator Agent from the User Question
 prompt_chart_instructions = PromptTemplate(
     template="""
     You are a supervisor that is an expert in providing instructions to a chart generator agent for plotting. 
