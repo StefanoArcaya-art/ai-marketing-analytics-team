@@ -208,15 +208,16 @@ def create_customer_transactions_agent(db_path, llm, temperature=0):
         
         Use the following criteria on how to route the the initial user question:
         
-        From the incoming user question, remove any details about the format of the final response as either a Chart or Table and return only the important part of the incoming user question that is relevant for the SQL generator agent. This will be the 'formatted_user_question_sql_only'. If 'None' is found, return the original user question.
+        From the incoming user question and the chat_history, remove any details about the format of the final response as either a Chart or Table and return only the important part of the incoming user question that is relevant for the SQL generator agent. This will be the 'formatted_user_question_sql_only'. If 'None' is found, return the original user question.
         
         Next, determine if the user would like a data visualization ('chart') or a 'table' returned with the results of the SQL query. If unknown, not specified or 'None' is found, then select 'table'.  
         
         Return JSON with 'formatted_user_question_sql_only' and 'routing_preprocessor_decision'.
         
         INITIAL_USER_QUESTION: {initial_question}
+        CONTEXT: {chat_history}
         """,
-        input_variables=["initial_question"]
+        input_variables=["initial_question", "chat_history"]
     )
 
     routing_preprocessor = routing_preprocessor_prompt | llm | JsonOutputParser()
@@ -388,6 +389,7 @@ def create_customer_transactions_agent(db_path, llm, temperature=0):
         Represents the state of our graph.
         """
         user_question: str
+        chat_history: list
         formatted_user_question_sql_only: str
         sql_query : str
         data: dict
@@ -402,12 +404,14 @@ def create_customer_transactions_agent(db_path, llm, temperature=0):
         print("---ROUTER---")
         question = state.get("user_question")
         
+        chat_history = state.get("chat_history")
+        
         num_steps = state.get("num_steps")
         
         num_steps += 1
         
         # Chart Routing and SQL Prep
-        response = routing_preprocessor.invoke({"initial_question": question})
+        response = routing_preprocessor.invoke({"initial_question": question, "chat_history": chat_history})
         
         formatted_user_question_sql_only = response['formatted_user_question_sql_only']
         
@@ -577,7 +581,7 @@ Image(customer_transactions_agent.get_graph().draw_mermaid_png())
 QUESTION = """
 What are the top 5 product sales revenue by product name? Make a donut chart. Use suggested price for the sales revenue and a unit quantity of 1 for all transactions.
 """
-result = customer_transactions_agent.invoke({"user_question": QUESTION, "num_steps": 0})
+result = customer_transactions_agent.invoke({"user_question": QUESTION, "chat_history": [HumanMessage(content=QUESTION)], "num_steps": 0})
 
 result
 
@@ -681,6 +685,8 @@ workflow.set_entry_point("supervisor")
 app = workflow.compile()
 
 Image(app.get_graph().draw_mermaid_png())
+
+
 
 # * TESTING THE BUSINESS INTELLIGENCE TEAM COPILOT
 
