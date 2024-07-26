@@ -787,7 +787,7 @@ result
 
 # Test Customer Transaction Expert
 result = app.invoke(
-    input = {"messages": [HumanMessage(content="What are the top 5 product sales revenue by product name? Use suggested price for the sales revenue and a unit quantity of 1 for all transactions.")]},
+    input = {"messages": [HumanMessage(content="What are the revenue generated in transactions table for the top 5 products? Use products table's suggested price for the sales revenue and a unit quantity of 1 for all transactions. Sort descending and show the product id and product description.")]},
     
     # * NEW: Add thread_id
     config = {"recursion_limit": 10},
@@ -800,4 +800,7 @@ last_ai_message = get_last_ai_message(result['messages'], target_name="Customer_
 pprint(last_ai_message.content)
 
 pprint(last_ai_message.additional_kwargs)
+
+
+
 
