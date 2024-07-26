@@ -67,7 +67,18 @@ subagent_names = ["Product_Expert", "Customer_Transactions_Expert", "Marketing_E
 def create_supervisor_agent(subagent_names: list, llm, temperature=0):
 
     system_prompt = (
-        "You are a supervisor tasked with managing a conversation between the following workers:  {subagent_names}. Given the following user request, respond with the worker to act next. Each worker will perform a task and respond with their results and status. When finished, respond with FINISH."
+        """
+        You are a supervisor tasked with managing a conversation between the following workers:  {subagent_names}. 
+        
+        Each worker has the following knowledge and skills:
+        1. Product_Expert: Can explain details of contents inside the courses from the course sales pages.
+        2. Customer_Transactions_Expert: Has knowledge of the company's customer transactions database. Has analytics and business intelligence skills. Can write SQL, produce data in table and charts. Has access to the customer SQL database that includes SQL tables containing information on customers, lead scores (how likely they are to buy), transactions, courses purchased, and types of products
+        3. Marketing_Email_Writer: Is skilled at drafting marketing emails using information from the Product_Expert to help explain what's inside various products that may be of benefit to the customer. 
+        
+        Given the following user request, respond with the worker to act next. 
+        
+        Each worker will perform a task and respond with their results and status. When finished, respond with FINISH.
+        """
     )
 
     route_options = ["FINISH"] + subagent_names 
@@ -115,9 +126,13 @@ def create_supervisor_agent(subagent_names: list, llm, temperature=0):
 
 supervisor_agent = create_supervisor_agent(subagent_names=subagent_names, llm=OPENAI_LLM, temperature=0.7)
 
-result = supervisor_agent.invoke({"messages": [HumanMessage(content="Is the 4-Course R-Track Open for Enrollment?")]})
+# QUESTION = "Is the 4-Course R-Track Open for Enrollment?"
+# result = supervisor_agent.invoke({"messages": [HumanMessage(content=QUESTION)]})
+# result
 
-result
+# QUESTION = "What are the top 5 product sales revenue by product name? Make a donut chart. Use suggested price for the sales revenue and a unit quantity of 1 for all transactions."
+# result = supervisor_agent.invoke({"messages": [HumanMessage(content=QUESTION)]})
+# result
 
 
 # *** PRODUCTS EXPERT RAG AGENT ****
@@ -180,11 +195,11 @@ def create_rag_agent(db_path, llm, temperature = 0):
 
 product_expert_agent = create_rag_agent(PATH_PRODUCTS_VECTORDB, llm=OPENAI_LLM, temperature=0.7)
 
-result = product_expert_agent.invoke({"input": "Is the 4-Course R-Track Open for Enrollment?", "chat_history": [HumanMessage(content="Is the 4-Course R-Track Open for Enrollment?")]})
+# result = product_expert_agent.invoke({"input": "Is the 4-Course R-Track Open for Enrollment?", "chat_history": [HumanMessage(content="Is the 4-Course R-Track Open for Enrollment?")]})
 
-result
+# result
 
-result['answer']
+# result['answer']
 
 
 # *** CUSTOMER TRANSACTIONS EXPERT ***
@@ -381,6 +396,34 @@ def create_customer_transactions_agent(db_path, llm, temperature=0):
     tools = [python_repl]
 
     chart_generator = prompt_chart_generator.partial(tool_names=", ".join([tool.name for tool in tools])) | llm.bind_tools(tools)
+    
+    # * Summarizer
+    
+    summarizer_prompt = PromptTemplate(
+        template="""
+        You are an expert in summarizing the analysis results of a Customer Transactions Expert. Your goal is to help the business understand the analysis in basic terms that business people can easily understand. Be consice in your explanation of the results. 
+        
+        The Customer Transactions Expert as knowledge of the company's customer transactions database. Has analytics and business intelligence skills. Can write SQL, produce data in table and charts. Has access to the customer SQL database that includes SQL tables containing information on customers, lead scores (how likely they are to buy), transactions, courses purchased, and types of products.
+        
+        You are given the results of a the Customer Transaction Expert's analysis that contain:
+        
+        - user_question: The initial user question that was asked to the Customer Transactions Expert
+        - chat_history: The previous chat history provided for additional context on the user's question
+        - formatted_user_question_sql_only: A processed version of the user question provided to the SQL expert
+        - sql_query: The sql query that the SQL expert created by accessing the Customer Analytics Database
+        - data: The results of the sql query when run on the database
+        - routing_processor_decision: either 'table' or 'chart'. If table, a chart is not returned. If chart, plotly code is created. 
+        
+        If a 'chart' was determined, the application will attempt to produce a chart. Sometimes errors occur, which is denoted by: 'chart_plotly_error'
+        
+        If a chart was successful, Python code and JSON will be produced, which are contained in 'chart_plotly_code' and 'chart_plotly_json' respectively. 
+         
+        ANALYSIS RESULTS FOR SUMMARIZATION: {results}
+        """,
+        input_variables=["results"]
+    )
+
+    summarizer = summarizer_prompt | llm | StrOutputParser()
 
 
     # * LANGGRAPH
@@ -398,6 +441,7 @@ def create_customer_transactions_agent(db_path, llm, temperature=0):
         chart_plotly_code: str
         chart_plotly_json: dict
         chart_plotly_error: bool
+        summary: str
         num_steps : int
         
     def preprocess_routing(state):
@@ -422,8 +466,6 @@ def create_customer_transactions_agent(db_path, llm, temperature=0):
             "routing_preprocessor_decision": routing_preprocessor_decision,
             "num_steps": num_steps
         }
-        
-
 
     def generate_sql(state):
         print("---GENERATE SQL---")
@@ -524,6 +566,17 @@ def create_customer_transactions_agent(db_path, llm, temperature=0):
             "num_steps": num_steps,
         }
         
+    def summarize_results(state):
+        print("---SUMMARIZE RESULTS----")
+        
+        result = summarizer.invoke({"results": dict(state)})
+        
+        num_steps = state.get("num_steps")
+        
+        num_steps += 1
+        
+        return {"summary": result, "num_steps": num_steps}
+        
         
     def state_printer(state):
         """print the state"""
@@ -549,6 +602,7 @@ def create_customer_transactions_agent(db_path, llm, temperature=0):
     workflow.add_node("convert_dataframe", convert_dataframe)
     workflow.add_node("instruct_chart_generator", instruct_chart_generator)
     workflow.add_node("generate_chart", generate_chart)
+    workflow.add_node("summarizer", summarize_results)
     workflow.add_node("state_printer", state_printer)
 
     workflow.set_entry_point("preprocess_routing")
@@ -561,12 +615,13 @@ def create_customer_transactions_agent(db_path, llm, temperature=0):
         {
             # Result : Step Name To Go To
             "chart":"instruct_chart_generator", # Path Chart
-            "table":"state_printer" # Path State Printer
+            "table":"summarizer" # Summarizer
         }
     )
 
     workflow.add_edge("instruct_chart_generator", "generate_chart")
-    workflow.add_edge("generate_chart", "state_printer")
+    workflow.add_edge("generate_chart", "summarizer")
+    workflow.add_edge("summarizer", "state_printer")
     workflow.add_edge("state_printer", END)
 
     app = workflow.compile()
@@ -578,18 +633,22 @@ customer_transactions_agent = create_customer_transactions_agent(db_path=PATH_TR
 Image(customer_transactions_agent.get_graph().draw_mermaid_png())
 
 
-QUESTION = """
-What are the top 5 product sales revenue by product name? Make a donut chart. Use suggested price for the sales revenue and a unit quantity of 1 for all transactions.
-"""
-result = customer_transactions_agent.invoke({"user_question": QUESTION, "chat_history": [HumanMessage(content=QUESTION)], "num_steps": 0})
+# QUESTION = """
+# What are the top 5 product sales revenue by product name? Make a donut chart. Use suggested price for the sales revenue and a unit quantity of 1 for all transactions.
+# """
+# result = customer_transactions_agent.invoke({"user_question": QUESTION, "chat_history": [HumanMessage(content=QUESTION)], "num_steps": 0})
 
-result
+# result
 
-result_dict = ast.literal_eval(result["chart_plotly_json"])
+# pprint(result['summary'])
+
+# pprint(result['sql_query'])
+
+# result_dict = ast.literal_eval(result["chart_plotly_json"])
         
-fig = pio.from_json(json.dumps(result_dict))
+# fig = pio.from_json(json.dumps(result_dict))
 
-fig
+# fig
 
 
 # *** MARKETING EMAIL WRITER ***
@@ -602,16 +661,27 @@ class GraphState(TypedDict):
     num_steps: Annotated[Sequence[int], operator.add]
     next: str
     
-# Helper function to get last question that the Human asked
+# Helper functions to get last question that the Human asked
 def get_last_human_message(msgs):
     # Iterate through the list in reverse order
     for msg in reversed(msgs):
         if isinstance(msg, HumanMessage):
             return msg
     return None
-    
+
+def get_last_ai_message(msgs, target_name=None):
+    for msg in reversed(msgs):
+        if not target_name:
+            if isinstance(msg, AIMessage):
+                return msg
+        if target_name:
+            if isinstance(msg, AIMessage) and msg.name == target_name:
+                return msg
+    return None
     
 def supervisor_node(state):
+    
+    print("---SUPERVISOR---")
     
     result = supervisor_agent.invoke(state)
     
@@ -622,7 +692,9 @@ def supervisor_node(state):
 
 def product_expert_node(state):
     
-    print(state["messages"])
+    print("---PRODUCT EXPERT---")
+    
+    # print(state["messages"])
     
     messages = state.get("messages")
     
@@ -632,9 +704,7 @@ def product_expert_node(state):
     
     result = product_expert_agent.invoke({"input": last_question, "chat_history": messages})
     
-    print(result)
-    
-    # result = 'No, the 4-Course R-Track is closed for enrollment.'
+    # print(result)
     
     return {
         "messages": [AIMessage(content=result['answer'], name='Product_Expert')],
@@ -643,20 +713,35 @@ def product_expert_node(state):
     
 def customer_transactions_expert_node(state):
     
-    result = "TEST"
+    print("---CUSTOMER TRANSACTIONS EXPERT---")
+    
+    messages = state.get("messages")
+    num_steps = state.get("num_steps")
+    
+    last_question = get_last_human_message(messages)
+    if last_question:
+        last_question = last_question.content
+    
+    result = customer_transactions_agent.invoke({
+        "user_question": last_question, 
+        "chat_history": messages, 
+        "num_steps": num_steps
+    })
     
     return {
-        "messages": [AIMessage(content=result, name='Product_Expert')],
+        "messages": [AIMessage(content=result['summary'], additional_kwargs=result, name='Customer_Transactions_Expert')],
         'num_steps': 1
     }
 
 
 def email_writer_node(state):
     
+    print("---MARKETING EMAIL WRITER---")
+    
     result = "TEST"
     
     return {
-        "messages": [AIMessage(content=result, name='Product_Expert')],
+        "messages": [AIMessage(content=result, name='Marketing_Email_Writer')],
         'num_steps': 1
     }
 
@@ -690,12 +775,29 @@ Image(app.get_graph().draw_mermaid_png())
 
 # * TESTING THE BUSINESS INTELLIGENCE TEAM COPILOT
 
-
+# Test Product Expert
 result = app.invoke(
     input = {"messages": [HumanMessage(content="Is the 4-Course R-Track Open for Enrollment?")]},
     
     # * NEW: Add thread_id
-    config = {"recursion_limit": 4},
+    config = {"recursion_limit": 10},
 )
 
 result
+
+# Test Customer Transaction Expert
+result = app.invoke(
+    input = {"messages": [HumanMessage(content="What are the top 5 product sales revenue by product name? Use suggested price for the sales revenue and a unit quantity of 1 for all transactions.")]},
+    
+    # * NEW: Add thread_id
+    config = {"recursion_limit": 10},
+)
+
+result['messages']
+
+last_ai_message = get_last_ai_message(result['messages'], target_name="Customer_Transactions_Expert")
+
+pprint(last_ai_message.content)
+
+pprint(last_ai_message.additional_kwargs)
+
