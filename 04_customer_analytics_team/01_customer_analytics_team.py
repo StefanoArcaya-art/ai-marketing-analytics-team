@@ -1,3 +1,13 @@
+# BUSINESS SCIENCE UNIVERSITY
+# PYTHON FOR GENERATIVE AI COURSE
+# MULTI-AGENTS (AGENTIAL SUPERVISION)
+# ***
+
+# Goal: Advanced application demonstrating combining everything we've learned so far:
+# 1. Supervision: Multi-Agent
+# 2. RAG with Memory
+# 3. Business Intelligence App with Flow Control
+
 
 
 # * LIBRARIES
@@ -71,7 +81,7 @@ def create_supervisor_agent(subagent_names: list, llm, temperature=0):
         You are a supervisor tasked with managing a conversation between the following workers:  {subagent_names}. 
         
         Each worker has the following knowledge and skills:
-        1. Product_Expert: Can explain details of contents inside the courses from the course sales pages.
+        1. Product_Expert: Can explain details of contents inside the courses from the course sales pages. Do not have the Product Expert write emails (the Marketing Expert shoudl do this). 
         2. Business_Intelligence_Expert: Has knowledge of the company's customer transactions database. Has access to the customer SQL database that includes SQL tables containing information on customers, lead scores (how likely they are to buy), transactions, courses purchased, and types of products. Can write SQL, produce data in table and charts. 
         3. Marketing_Email_Writer: Is skilled at drafting marketing emails using information from the Product_Expert to help explain what's inside various products that may be of benefit to the customer. Uses SQL queries and data from the Business_Intelligence_Expert to target customers by their email address and products that they have not currently purchased.
         
@@ -137,6 +147,43 @@ supervisor_agent = create_supervisor_agent(subagent_names=subagent_names, llm=OP
 
 # *** PRODUCTS EXPERT RAG AGENT (PROJECT 1) ****
 
+def create_rag_question_preprocessor_agent(llm, temperature=0):
+    
+    llm.temperature = temperature
+    
+    prompt = PromptTemplate(
+        template="""
+        You are a question preparer for a Product Expert. Your goal is to extract the relevant part of the question so the Product Expert knows which product or products to provide information on. 
+        
+        Remove anything about writing marketing emails or emails in general. 
+        
+        Remove anything related to business analytics that requires knowledge of a customers, transactions, or subscribers. Leave only information related to collecting information on the product or products in question. 
+        
+        Only return the product or products to collect information on, and what information to collect on those products. 
+        
+        User Input: {user_question}
+        """,
+        input_variables=['user_question']
+    )
+    
+    rag_preprocessor = prompt | llm | StrOutputParser()
+    
+    return rag_preprocessor
+
+
+rag_preprocessor = create_rag_question_preprocessor_agent(llm=OPENAI_LLM, temperature=0)
+
+
+# QUESTION = "Find the top 20 email subscribers ranked by probability of purchase (p1 lead score in the leads_scored table) who have have not purchased any courses yet? Have the Product Expert collect information on the 5-Course R-Track for use with the Marketing Expert. Have the Marketing Expert write a compelling marketing email."
+# result = rag_preprocessor.invoke({'user_question': QUESTION})
+
+# result
+
+# QUESTION = "What's inside the 5-Course R-Track?"
+# result = rag_preprocessor.invoke({'user_question': QUESTION})
+
+# result
+
 def create_rag_agent(db_path, llm, temperature = 0):
     
     embedding_function = OpenAIEmbeddings(
@@ -195,11 +242,17 @@ def create_rag_agent(db_path, llm, temperature = 0):
 
 product_expert_agent = create_rag_agent(PATH_PRODUCTS_VECTORDB, llm=OPENAI_LLM, temperature=0.7)
 
-# result = product_expert_agent.invoke({"input": "Is the 4-Course R-Track Open for Enrollment?", "chat_history": [HumanMessage(content="Is the 4-Course R-Track Open for Enrollment?")]})
+# QUESTION = "Is the 4-Course R-Track Open for Enrollment?"
+# result = product_expert_agent.invoke({"input": QUESTION, "chat_history": [HumanMessage(content=QUESTION")]})
 
 # result
 
 # result['answer']
+
+# QUESTION = "What's inside the 5-Course R-Track"
+# result = product_expert_agent.invoke({"input": QUESTION, "chat_history": [HumanMessage(content=QUESTION)]})
+
+# pprint(result['answer'])
 
 
 # *** BUSINESS INTELLIGENCE EXPERT (PROJECT 2) ***
@@ -209,8 +262,6 @@ def create_business_intelligence_agent(db_path, llm, temperature=0):
     PATH_DB = db_path
     
     llm.temperature = temperature
-    
-    # * Handle Messages
     
     # * Routing Preprocessor Agent
 
@@ -648,6 +699,52 @@ Image(business_intelligence_agent.get_graph().draw_mermaid_png())
 
 # *** MARKETING EMAIL WRITER ***
 
+def create_marketing_agent(llm, temperature = 1.0):
+    
+    llm.temperature = temperature
+    
+    # * Routing Preprocessor Agent
+
+    marketing_agent_prompt = PromptTemplate(
+        template="""
+        You are an expert in writing marketing email copy for Business Science, a premium data science educational platform. 
+        
+        Your emails are designed to inform customers about products that they might be interested in, and to target customers by email address.
+        
+        Your email should specify:
+        
+        1. Which customer email addresses to target
+        2. An attention grabbing email subject
+        3. Include email content designed to educate and provide reasons that they should invest in our educational program
+        
+        Examples of good reasons to purchase include:
+        1. Getting a career advancement or new job
+        2. Developing a portfolio to attract recruiters and wow their bosses
+        3. Taking action: Stop procrastinating and finally take action towards a fullfilling career
+        4. Increased Salary: Many Data Scientists make over $100,000 per year. 
+        
+        IMPORTANT: Make sure to explain why the product you are recommending will help them address their goal.
+        
+        INITIAL_USER_QUESTION: {initial_question}
+        CONTEXT: {chat_history}
+        """,
+        input_variables=["initial_question", "chat_history"]
+    )
+
+    marketing_agent = marketing_agent_prompt | llm | StrOutputParser()
+    
+    return marketing_agent
+
+marketing_agent = create_marketing_agent(llm=OPENAI_LLM, temperature=1.2)
+
+# HISTORY = [
+#     HumanMessage(content="Find the top 20 email subscribers who have have not purchased any courses yet? Collect information on the 5-Course R-Track. Write a compelling email."),
+#     AIMessage(content="The top 20 Emails are: 1. adfdno@gmail.com, ..., 20. ldkjn@gmail.com", name="Business_Intelligence_Expert"),
+#     AIMessage(content="The 5-Course R-Track includes the following courses:\n\n1. **Data Science for Business Part 1**: This course covers the fundamentals of data science for business using R and the tidyverse. It has 407 lessons and 33.9 hours of video content.\n\n2. **Data Science for Business Part 2**: This course focuses on solving a real-world churn problem using H2O AutoML and LIME for model explanations. It includes 220 lessons and 18.3 hours of video.\n\n3. **Shiny Web Applications Part 1**: In this course, students will learn how to build a predictive web application using Shiny, Flexdashboard, and XGBoost. It contains 238 lessons and 19.8 hours of video.\n\n4. **Shiny Web Applications Part 2**: This course teaches how to build scalable data science applications using R, Shiny, and AWS Cloud Technology. It includes 434 lessons and 35.1 hours of video.\n\n5. **High-Performance Time Series**: Designed to make participants experts in time series forecasting, this course has 549 lessons and 45.8 hours of video.\n\nOverall, the 5-Course R-Track includes 1,848 lessons, 152.9 hours of video, and various challenges to test skills.", name="Product_Expert")
+# ]
+# result = marketing_agent.invoke({'initial_question': HISTORY[0],'chat_history': HISTORY})
+
+# pprint(result)
 
 # * LANGGRAPH
 
@@ -697,6 +794,9 @@ def product_expert_node(state):
     if last_question:
         last_question = last_question.content
     
+    # Implement a preprocessor
+    last_question = rag_preprocessor.invoke({'user_question': last_question})
+    
     result = product_expert_agent.invoke({"input": last_question, "chat_history": messages})
     
     # print(result)
@@ -733,7 +833,14 @@ def email_writer_node(state):
     
     print("---MARKETING EMAIL WRITER---")
     
-    result = "TEST"
+    messages = state.get("messages")
+    num_steps = state.get("num_steps")
+    
+    last_question = get_last_human_message(messages)
+    if last_question:
+        last_question = last_question.content
+        
+    result = marketing_agent.invoke({'initial_question': last_question,'chat_history': messages})
     
     return {
         "messages": [AIMessage(content=result, name='Marketing_Email_Writer')],
@@ -780,7 +887,7 @@ result = app.invoke(
 
 result
 
-# Test Customer Transaction Expert
+# Test Business Intelligence Expert
 result = app.invoke(
     input = {"messages": [HumanMessage(content="What tables are in the customer analytics database?")]},
     
@@ -793,6 +900,7 @@ result['messages']
 pprint(get_last_ai_message(result['messages'], target_name="Business_Intelligence_Expert").content)
 
 
+# Test Business Intelligence 
 result = app.invoke(
     input = {"messages": [HumanMessage(content="What are the revenue generated in transactions table for the top 5 products? Use products table's suggested price for the sales revenue and a unit quantity of 1 for all transactions. Sort descending and show the product id and product description.")]},
     
@@ -808,6 +916,23 @@ pprint(last_ai_message.content)
 
 pprint(last_ai_message.additional_kwargs)
 
+# Test Marketing Email Writer
+
+result = app.invoke(
+    input = {"messages": [HumanMessage(content="Find the top 20 email subscribers ranked by probability of purchase (p1 lead score in the leads_scored table) who have have not purchased any courses yet? Have the Product Expert collect information on the 5-Course R-Track for use with the Marketing Expert. Have the Marketing Expert write a compelling marketing email.")]},
+    
+    # * NEW: Add thread_id
+    config = {"recursion_limit": 10},
+)
 
 
+result['messages']
+
+pprint(result['messages'][1].content)
+
+pprint(result['messages'][1].additional_kwargs)
+
+pprint(result['messages'][2].content)
+
+pprint(result['messages'][3].content)
 

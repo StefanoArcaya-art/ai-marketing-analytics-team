@@ -3,11 +3,7 @@
 # MULTI-AGENTS (AGENTIAL SUPERVISION)
 # ***
 
-# Goal: Add Charting (Plotting)
-# - Custom SQL Parser: I needed this to standardize the output between gpt-3.5-turbo and gpt-4o
-# - Chart Instructor Agent: Prompt Engineered Agent to reformulate instructions from user input for chart generator agent
-# - Chart Generator Agent: Writes the Plotly Python Code 
-# - Python REPL Tools: A tool to run (execute) Python code
+# Goal: The project 2 business intelligence AI copilot
 
 # Requirements:
 # pip install langgraph==0.0.48 langchain_groq==0.5.0
