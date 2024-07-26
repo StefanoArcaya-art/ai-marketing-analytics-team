@@ -62,7 +62,7 @@ OPENAI_LLM = ChatOpenAI(
 
 # *** SUPERVISOR AGENT ***
 
-subagent_names = ["Product_Expert", "Customer_Transactions_Expert", "Marketing_Email_Writer"]
+subagent_names = ["Product_Expert", "Business_Intelligence_Expert", "Marketing_Email_Writer"]
 
 def create_supervisor_agent(subagent_names: list, llm, temperature=0):
 
@@ -72,7 +72,7 @@ def create_supervisor_agent(subagent_names: list, llm, temperature=0):
         
         Each worker has the following knowledge and skills:
         1. Product_Expert: Can explain details of contents inside the courses from the course sales pages.
-        2. Customer_Transactions_Expert: Has knowledge of the company's customer transactions database. Has analytics and business intelligence skills. Can write SQL, produce data in table and charts. Has access to the customer SQL database that includes SQL tables containing information on customers, lead scores (how likely they are to buy), transactions, courses purchased, and types of products
+        2. Business_Intelligence_Expert: Has knowledge of the company's customer transactions database. Has analytics and business intelligence skills. Can write SQL, produce data in table and charts. Has access to the customer SQL database that includes SQL tables containing information on customers, lead scores (how likely they are to buy), transactions, courses purchased, and types of products
         3. Marketing_Email_Writer: Is skilled at drafting marketing emails using information from the Product_Expert to help explain what's inside various products that may be of benefit to the customer. 
         
         Given the following user request, respond with the worker to act next. 
@@ -135,7 +135,7 @@ supervisor_agent = create_supervisor_agent(subagent_names=subagent_names, llm=OP
 # result
 
 
-# *** PRODUCTS EXPERT RAG AGENT ****
+# *** PRODUCTS EXPERT RAG AGENT (PROJECT 1) ****
 
 def create_rag_agent(db_path, llm, temperature = 0):
     
@@ -202,9 +202,9 @@ product_expert_agent = create_rag_agent(PATH_PRODUCTS_VECTORDB, llm=OPENAI_LLM, 
 # result['answer']
 
 
-# *** CUSTOMER TRANSACTIONS EXPERT ***
+# *** BUSINESS INTELLIGENCE EXPERT (PROJECT 2) ***
 
-def create_customer_transactions_agent(db_path, llm, temperature=0):    
+def create_business_intelligence_agent(db_path, llm, temperature=0):    
     
     PATH_DB = db_path
     
@@ -543,9 +543,6 @@ def create_customer_transactions_agent(db_path, llm, temperature=0):
         
         result = repl.run(code)
         
-        # Add plot to global environment
-        # globals()["chart_plotly_json"] = result
-        
         chart_plotly_error = False
         if "error" in result[:40].lower():
             chart_plotly_error = True
@@ -554,8 +551,6 @@ def create_customer_transactions_agent(db_path, llm, temperature=0):
                 result_dict = ast.literal_eval(result)
             
                 fig = pio.from_json(json.dumps(result_dict))
-
-                # fig.show()
             except:
                 chart_plotly_error = True
             
@@ -628,15 +623,15 @@ def create_customer_transactions_agent(db_path, llm, temperature=0):
     
     return app
 
-customer_transactions_agent = create_customer_transactions_agent(db_path=PATH_TRANSACTIONS_DATABASE, llm = OPENAI_LLM, temperature=0)
+business_intelligence_agent = create_business_intelligence_agent(db_path=PATH_TRANSACTIONS_DATABASE, llm = OPENAI_LLM, temperature=0)
 
-Image(customer_transactions_agent.get_graph().draw_mermaid_png())
+Image(business_intelligence_agent.get_graph().draw_mermaid_png())
 
 
 # QUESTION = """
 # What are the top 5 product sales revenue by product name? Make a donut chart. Use suggested price for the sales revenue and a unit quantity of 1 for all transactions.
 # """
-# result = customer_transactions_agent.invoke({"user_question": QUESTION, "chat_history": [HumanMessage(content=QUESTION)], "num_steps": 0})
+# result = business_intelligence_agent.invoke({"user_question": QUESTION, "chat_history": [HumanMessage(content=QUESTION)], "num_steps": 0})
 
 # result
 
@@ -711,9 +706,9 @@ def product_expert_node(state):
         'num_steps': 1
     }
     
-def customer_transactions_expert_node(state):
+def business_intelligence_expert_node(state):
     
-    print("---CUSTOMER TRANSACTIONS EXPERT---")
+    print("---BUSINESS INTELLIGENCE EXPERT---")
     
     messages = state.get("messages")
     num_steps = state.get("num_steps")
@@ -722,14 +717,14 @@ def customer_transactions_expert_node(state):
     if last_question:
         last_question = last_question.content
     
-    result = customer_transactions_agent.invoke({
+    result = business_intelligence_agent.invoke({
         "user_question": last_question, 
         "chat_history": messages, 
         "num_steps": num_steps
     })
     
     return {
-        "messages": [AIMessage(content=result['summary'], additional_kwargs=result, name='Customer_Transactions_Expert')],
+        "messages": [AIMessage(content=result['summary'], additional_kwargs=result, name='Business_Intelligence_Expert')],
         'num_steps': 1
     }
 
@@ -751,7 +746,7 @@ workflow = StateGraph(GraphState)
 
 workflow.add_node("supervisor", supervisor_node)
 workflow.add_node("Product_Expert", product_expert_node)
-workflow.add_node("Customer_Transactions_Expert", customer_transactions_expert_node)
+workflow.add_node("Business_Intelligence_Expert", business_intelligence_expert_node)
 workflow.add_node("Marketing_Email_Writer", email_writer_node)
 
 for member in subagent_names:
@@ -759,7 +754,7 @@ for member in subagent_names:
 
 conditional_map = {
     'Product_Expert': 'Product_Expert', 
-    'Customer_Transactions_Expert': 'Customer_Transactions_Expert', 
+    'Business_Intelligence_Expert': 'Business_Intelligence_Expert', 
     'Marketing_Email_Writer':'Marketing_Email_Writer',
     'FINISH': END
 }
@@ -773,7 +768,7 @@ Image(app.get_graph().draw_mermaid_png())
 
 
 
-# * TESTING THE BUSINESS INTELLIGENCE TEAM COPILOT
+# * TESTING THE CUSTOMER MARKETING ANALYTICS TEAM (AI COPILOT)
 
 # Test Product Expert
 result = app.invoke(
@@ -787,6 +782,18 @@ result
 
 # Test Customer Transaction Expert
 result = app.invoke(
+    input = {"messages": [HumanMessage(content="What tables are in the customer analytics database?")]},
+    
+    # * NEW: Add thread_id
+    config = {"recursion_limit": 10},
+)
+
+result['messages']
+
+pprint(get_last_ai_message(result['messages'], target_name="Business_Intelligence_Expert").content)
+
+
+result = app.invoke(
     input = {"messages": [HumanMessage(content="What are the revenue generated in transactions table for the top 5 products? Use products table's suggested price for the sales revenue and a unit quantity of 1 for all transactions. Sort descending and show the product id and product description.")]},
     
     # * NEW: Add thread_id
@@ -795,7 +802,7 @@ result = app.invoke(
 
 result['messages']
 
-last_ai_message = get_last_ai_message(result['messages'], target_name="Customer_Transactions_Expert")
+last_ai_message = get_last_ai_message(result['messages'], target_name="Business_Intelligence_Expert")
 
 pprint(last_ai_message.content)
 
