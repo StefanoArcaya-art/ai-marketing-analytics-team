@@ -243,7 +243,7 @@ def create_rag_agent(db_path, llm, temperature = 0):
 product_expert_agent = create_rag_agent(PATH_PRODUCTS_VECTORDB, llm=OPENAI_LLM, temperature=0.7)
 
 # QUESTION = "Is the 4-Course R-Track Open for Enrollment?"
-# result = product_expert_agent.invoke({"input": QUESTION, "chat_history": [HumanMessage(content=QUESTION")]})
+# result = product_expert_agent.invoke({"input": QUESTION, "chat_history": [HumanMessage(content=QUESTION)]})
 
 # result
 
@@ -737,14 +737,14 @@ def create_marketing_agent(llm, temperature = 1.0):
 
 marketing_agent = create_marketing_agent(llm=OPENAI_LLM, temperature=1.2)
 
-# HISTORY = [
-#     HumanMessage(content="Find the top 20 email subscribers who have have not purchased any courses yet? Collect information on the 5-Course R-Track. Write a compelling email."),
-#     AIMessage(content="The top 20 Emails are: 1. adfdno@gmail.com, ..., 20. ldkjn@gmail.com", name="Business_Intelligence_Expert"),
-#     AIMessage(content="The 5-Course R-Track includes the following courses:\n\n1. **Data Science for Business Part 1**: This course covers the fundamentals of data science for business using R and the tidyverse. It has 407 lessons and 33.9 hours of video content.\n\n2. **Data Science for Business Part 2**: This course focuses on solving a real-world churn problem using H2O AutoML and LIME for model explanations. It includes 220 lessons and 18.3 hours of video.\n\n3. **Shiny Web Applications Part 1**: In this course, students will learn how to build a predictive web application using Shiny, Flexdashboard, and XGBoost. It contains 238 lessons and 19.8 hours of video.\n\n4. **Shiny Web Applications Part 2**: This course teaches how to build scalable data science applications using R, Shiny, and AWS Cloud Technology. It includes 434 lessons and 35.1 hours of video.\n\n5. **High-Performance Time Series**: Designed to make participants experts in time series forecasting, this course has 549 lessons and 45.8 hours of video.\n\nOverall, the 5-Course R-Track includes 1,848 lessons, 152.9 hours of video, and various challenges to test skills.", name="Product_Expert")
-# ]
-# result = marketing_agent.invoke({'initial_question': HISTORY[0],'chat_history': HISTORY})
+HISTORY = [
+    HumanMessage(content="Find the top 20 email subscribers who have have not purchased any courses yet? Collect information on the 5-Course R-Track. Write a compelling email."),
+    AIMessage(content="The top 20 Emails are: 1. adfdno@gmail.com, ..., 20. ldkjn@gmail.com", name="Business_Intelligence_Expert"),
+    AIMessage(content="The 5-Course R-Track includes the following courses:\n\n1. **Data Science for Business Part 1**: This course covers the fundamentals of data science for business using R and the tidyverse. It has 407 lessons and 33.9 hours of video content.\n\n2. **Data Science for Business Part 2**: This course focuses on solving a real-world churn problem using H2O AutoML and LIME for model explanations. It includes 220 lessons and 18.3 hours of video.\n\n3. **Shiny Web Applications Part 1**: In this course, students will learn how to build a predictive web application using Shiny, Flexdashboard, and XGBoost. It contains 238 lessons and 19.8 hours of video.\n\n4. **Shiny Web Applications Part 2**: This course teaches how to build scalable data science applications using R, Shiny, and AWS Cloud Technology. It includes 434 lessons and 35.1 hours of video.\n\n5. **High-Performance Time Series**: Designed to make participants experts in time series forecasting, this course has 549 lessons and 45.8 hours of video.\n\nOverall, the 5-Course R-Track includes 1,848 lessons, 152.9 hours of video, and various challenges to test skills.", name="Product_Expert")
+]
+result = marketing_agent.invoke({'initial_question': HISTORY[0],'chat_history': HISTORY})
 
-# pprint(result)
+pprint(result)
 
 # * LANGGRAPH
 

@@ -11,7 +11,7 @@
 # * LIBRARIES
 
 from langchain.agents import AgentExecutor, create_openai_tools_agent
-from langchain_core.messages import BaseMessage, HumanMessage
+from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
 from langchain_openai import ChatOpenAI
 
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -116,6 +116,10 @@ supervisor_chain = (
 
 supervisor_chain
 
+# QUESTION = "What is the last 5 years of daily history for SPY?"
+# result = supervisor_chain.invoke({"messages": [HumanMessage(content=QUESTION)]})
+# result
+
 # * SUBAGENTS
 
 # * Helper function
@@ -147,6 +151,12 @@ researcher_agent = create_agent_with_tools(
 
 researcher_agent
 
+QUESTION = "What is the last 5 years of daily history for SPY?"
+result = researcher_agent.invoke({"messages": [HumanMessage(content=QUESTION)]})
+result
+
+pprint(result)
+
 # * Coder Agent
 
 coder_agent = create_agent_with_tools(
@@ -156,6 +166,12 @@ coder_agent = create_agent_with_tools(
 )
 
 coder_agent
+
+QUESTION = "What is the last 5 years of daily history for SPY. Feel free to use yfinance library. Plot price by date using ploly? Make sure to use end date: 2024-07-25."
+result = coder_agent.invoke({"messages": [HumanMessage(content=QUESTION)]})
+result
+
+pprint(result)
 
 # * LANGGRAPH
 
@@ -179,7 +195,7 @@ def research_node(state):
     result = researcher_agent.invoke(state)
     
     return {
-        "messages": [HumanMessage(content=result["output"], name="Researcher")],
+        "messages": [AIMessage(content=result["output"], name="Researcher")],
         'num_steps': 1
     }
 
@@ -188,7 +204,7 @@ def coder_node(state):
     result = coder_agent.invoke(state)
     
     return {
-        "messages": [HumanMessage(content=result["output"], name="Coder")],
+        "messages": [AIMessage(content=result["output"], name="Coder")],
         'num_steps': 1
     }
 

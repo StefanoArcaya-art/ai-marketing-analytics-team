@@ -14,7 +14,7 @@
 from langgraph.checkpoint.sqlite import SqliteSaver
 
 from langchain.agents import AgentExecutor, create_openai_tools_agent
-from langchain_core.messages import BaseMessage, HumanMessage
+from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
 from langchain_openai import ChatOpenAI
 
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -186,7 +186,7 @@ def research_node(state):
     result = researcher_agent.invoke(state)
     
     return {
-        "messages": [HumanMessage(content=result["output"], name="Researcher")],
+        "messages": [AIMessage(content=result["output"], name="Researcher")],
         'num_steps': 1
     }
 
@@ -195,7 +195,7 @@ def coder_node(state):
     result = coder_agent.invoke(state)
     
     return {
-        "messages": [HumanMessage(content=result["output"], name="Coder")],
+        "messages": [AIMessage(content=result["output"], name="Coder")],
         'num_steps': 1
     }
 
