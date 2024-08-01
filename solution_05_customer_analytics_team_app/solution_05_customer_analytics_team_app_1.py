@@ -80,14 +80,15 @@ os.environ["OPENAI_API_KEY"] = yaml.safe_load(open('../credentials.yml'))['opena
 
 # * STREAMLIT APP SETUP ----
 
-st.set_page_config(page_title="Your Supervised 3 AI Agent Customer Marketing Analytics Team")
-st.title("Your Supervised 3 AI Agent Customer Marketing Analytics Team")
+st.set_page_config(page_title="AI Marketing Analytics Team")
+st.title("AI Marketing Analytics Team")
 
 with st.expander("I'm a complete Customer Analytics Marketing Team. I have 3 core agents. (See more.)"):
 
     st.markdown(
         """
-        I'm a complete Customer Analytics Marketing Team. I have 3 core agents that have the following skills:
+        I'm a complete Customer Analytics Marketing Team. I have 1 supervisor agent that routes tasks, and 3 core agents that have the following skills:
+        
         1. **Product Expert:** Can explain details of contents inside the courses from the course sales pages. Do not have the Product Expert write emails (the Marketing Expert shoudl do this). 
         2. **Business Intelligence Expert:** Has knowledge of the company's customer transactions database. Has access to the customer SQL database that includes SQL tables containing information on customers, lead scores (how likely they are to buy), transactions, courses purchased, and types of products. Can write SQL, produce data in table and charts. 
         3. **Marketing_Email_Writer:** Is skilled at drafting marketing emails using information from the Product_Expert to help explain what's inside various products that may be of benefit to the customer. Uses SQL queries and data from the Business_Intelligence_Expert to target customers by their email address and products that they have not currently purchased. 
