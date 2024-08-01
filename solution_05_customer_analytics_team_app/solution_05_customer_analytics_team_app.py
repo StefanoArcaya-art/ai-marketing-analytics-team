@@ -834,12 +834,21 @@ app = workflow.compile()
 
 # * STREAMLIT APP SETUP ----
 
-st.set_page_config(page_title="Your Business Intelligence AI Copilot")
-st.title("Your Business Intelligence AI Copilot")
+st.set_page_config(page_title="Your Customer Marketing Analytics AI Team")
+st.title("Your Customer Marketing Analytics AI Team")
 
-st.markdown("""
-            I'm a handy business intelligence agent that connects up to the leads_scored.db SQLite database that mimics an ERP System for a company. You can ask me Business Intelligence, Customer Analytics, and Data Visualization Questions. I will report the results. 
-            """)
+with st.expander("I'm a complete Customer Analytics Marketing Team. I have 3 core agents. (See more.)"):
+
+    st.markdown(
+        """
+        I'm a complete Customer Analytics Marketing Team. I have 3 core agents that have the following skills:
+        1. **Product Expert:** Can explain details of contents inside the courses from the course sales pages. Do not have the Product Expert write emails (the Marketing Expert shoudl do this). 
+        2. **Business Intelligence Expert:** Has knowledge of the company's customer transactions database. Has access to the customer SQL database that includes SQL tables containing information on customers, lead scores (how likely they are to buy), transactions, courses purchased, and types of products. Can write SQL, produce data in table and charts. 
+        3. **Marketing_Email_Writer:** Is skilled at drafting marketing emails using information from the Product_Expert to help explain what's inside various products that may be of benefit to the customer. Uses SQL queries and data from the Business_Intelligence_Expert to target customers by their email address and products that they have not currently purchased. 
+        
+        Use us to accomplish data-driven marketing tasks like creating persuasive emails for customers who have not yet purchased a product. 
+        """
+    )
 
 # Set up memory
 msgs = StreamlitChatMessageHistory(key="langchain_messages")
@@ -856,6 +865,7 @@ def display_chat_history():
 
 # Render current messages from StreamlitChatMessageHistory
 display_chat_history()
+
 
 initial_question = "Make a table of the revenue generated in transactions table for the top 5 products? Use products table's suggested price for the sales revenue and a unit quantity of 1 for all transactions. Sort descending and show the product id and product description. Only use the Business Intelligence Expert for this task. Don't use the Product Expert or Marketing Email Writer."
 
