@@ -857,7 +857,10 @@ def display_chat_history():
 # Render current messages from StreamlitChatMessageHistory
 display_chat_history()
 
-initial_question = "What are the revenue generated in transactions table for the top 5 products? Use products table's suggested price for the sales revenue and a unit quantity of 1 for all transactions. Sort descending and show the product id and product description."
+initial_question = "Make a table of the revenue generated in transactions table for the top 5 products? Use products table's suggested price for the sales revenue and a unit quantity of 1 for all transactions. Sort descending and show the product id and product description. Only use the Business Intelligence Expert for this task. Don't use the Product Expert or Marketing Email Writer."
+
+
+initial_question = "Find the top 20 email subscribers ranked by probability of purchase (p1 lead score in the leads_scored table) who have have not purchased any courses yet? Have the Product Expert collect information on the 5-Course R-Track for use with the Marketing Expert. Have the Marketing Expert write a compelling marketing email."
 
 if question := st.chat_input("Enter your question here:", key="query_input"):
     with st.spinner("Thinking..."):
@@ -871,12 +874,16 @@ if question := st.chat_input("Enter your question here:", key="query_input"):
                 config={"recursion_limit": 10, "configurable": {"thread_id": "1"}},
             )
 
-            st.write("Result:")
+            response_text = "Result:\n\n"
             for message in result['messages']:
                 if message.name:
-                    st.write(f"Name: {message.name}")
-                st.write(f"Content: {message.content}")
-                st.write("---")
+                    response_text += f"**Name:** {message.name}\n"
+                    response_text += f"**Content:** \n\n{message.content}\n"
+                response_text += "---\n"
+            
+            msgs.add_ai_message(response_text)
+            st.chat_message("ai").write(response_text)
+                
         except Exception as e:
             error_occured = True
             response_text = f"An error occurred. I apologize. Please try again or format the question differently and I'll try my best to provide a helpful answer."
