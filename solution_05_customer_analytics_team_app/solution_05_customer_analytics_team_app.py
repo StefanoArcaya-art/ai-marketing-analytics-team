@@ -144,15 +144,6 @@ def create_supervisor_agent(subagent_names: list, llm, temperature=0):
 
 supervisor_agent = create_supervisor_agent(subagent_names=subagent_names, llm=OPENAI_LLM, temperature=0.7)
 
-# QUESTION = "Is the 4-Course R-Track Open for Enrollment?"
-# result = supervisor_agent.invoke({"messages": [HumanMessage(content=QUESTION)]})
-# result
-
-# QUESTION = "What are the top 5 product sales revenue by product name? Make a donut chart. Use suggested price for the sales revenue and a unit quantity of 1 for all transactions."
-# result = supervisor_agent.invoke({"messages": [HumanMessage(content=QUESTION)]})
-# result
-
-
 # *** PRODUCTS EXPERT RAG AGENT (PROJECT 1) ****
 
 def create_rag_question_preprocessor_agent(llm, temperature=0):
@@ -229,6 +220,8 @@ def create_rag_agent(db_path, llm, temperature = 0):
         {context}
 
         Question: {question}
+        
+        Do not use markdown headers in your response.
         """
     )
     
@@ -437,7 +430,7 @@ def create_business_intelligence_agent(db_path, llm, temperature=0):
     
     summarizer_prompt = PromptTemplate(
         template="""
-        You are an expert in summarizing the analysis results of a Customer Transactions Expert. Your goal is to help the business understand the analysis in basic terms that business people can easily understand. Be consice in your explanation of the results. 
+        You are an expert in summarizing the analysis results of a Customer Transactions Expert. Your goal is to help the business understand the analysis in basic terms that business people can easily understand. Be consice in your explanation of the results. When possible please include summary tables to convey information instead of bullet points. Do not use markdown headers in your response.
         
         The Customer Transactions Expert as knowledge of the company's customer transactions database. Has analytics and business intelligence skills. Can write SQL, produce data in table and charts. Has access to the customer SQL database that includes SQL tables containing information on customers, lead scores (how likely they are to buy), transactions, courses purchased, and types of products.
         
@@ -867,10 +860,12 @@ def display_chat_history():
 display_chat_history()
 
 
-initial_question = "Make a table of the revenue generated in transactions table for the top 5 products? Use products table's suggested price for the sales revenue and a unit quantity of 1 for all transactions. Sort descending and show the product id and product description. Only use the Business Intelligence Expert for this task. Don't use the Product Expert or Marketing Email Writer."
+"Make a table of the revenue generated in transactions table for the top 5 products? Use products table's suggested price for the sales revenue and a unit quantity of 1 for all transactions. Sort descending and show the product id and product description. Only use the Business Intelligence Expert for this task. Don't use the Product Expert or Marketing Email Writer."
 
 
-initial_question = "Find the top 20 email subscribers ranked by probability of purchase (p1 lead score in the leads_scored table) who have have not purchased any courses yet? Have the Product Expert collect information on the 5-Course R-Track for use with the Marketing Expert. Have the Marketing Expert write a compelling marketing email."
+"Find the top 20 email subscribers ranked by probability of purchase (p1 lead score in the leads_scored table) who have have not purchased any courses yet? Have the Product Expert collect information on the 5-Course R-Track for use with the Marketing Expert. Have the Marketing Expert write a compelling marketing email."
+
+"What courses are inside the 5-Course R-Track? Use the Product Expert only. Do not use the Business Intelligence Expert or the Marketing Email Writer."
 
 if question := st.chat_input("Enter your question here:", key="query_input"):
     with st.spinner("Thinking..."):
@@ -884,11 +879,11 @@ if question := st.chat_input("Enter your question here:", key="query_input"):
                 config={"recursion_limit": 10, "configurable": {"thread_id": "1"}},
             )
 
-            response_text = "Result:\n\n"
+            response_text = "## Result:\n\n"
             for message in result['messages']:
                 if message.name:
-                    response_text += f"**Name:** {message.name}\n"
-                    response_text += f"**Content:** \n\n{message.content}\n"
+                    response_text += f"### **Team Member:** {message.name}\n\n"
+                    response_text += f"\n\n{message.content}\n"
                 response_text += "---\n"
             
             msgs.add_ai_message(response_text)
