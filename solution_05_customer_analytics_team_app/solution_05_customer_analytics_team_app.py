@@ -11,7 +11,13 @@
 #  1. App should have chat memory 
 #  2. Suggest any improvements
 
+# EXAMPLE QUESTIONS
 
+# "Make a table of the revenue generated in transactions table for the top 5 products? Use products table's suggested price for the sales revenue and a unit quantity of 1 for all transactions. Sort descending and show the product id and product description. Only use the Business Intelligence Expert for this task. Don't use the Product Expert or Marketing Email Writer."
+
+# "Find the top 20 email subscribers ranked by probability of purchase (p1 lead score in the leads_scored table) who have have not purchased any courses yet? Have the Product Expert collect information on the 5-Course R-Track for use with the Marketing Expert. Have the Marketing Expert write a compelling marketing email."
+
+# "What courses are inside the 5-Course R-Track? Use the Product Expert only. Do not use the Business Intelligence Expert or the Marketing Email Writer."
 
 
 # * LIBRARIES
@@ -665,7 +671,7 @@ def create_marketing_agent(llm, temperature = 1.0):
 
     marketing_agent_prompt = PromptTemplate(
         template="""
-        You are an expert in writing marketing email copy for Business Science, a premium data science educational platform. 
+        You are an expert in writing marketing email copy for Business Science, a premium data science educational platform. Don't use markdown headers in your response.
         
         Your emails are designed to inform customers about products that they might be interested in, and to target customers by email address.
         
@@ -827,8 +833,8 @@ app = workflow.compile()
 
 # * STREAMLIT APP SETUP ----
 
-st.set_page_config(page_title="Your Customer Marketing Analytics AI Team")
-st.title("Your Customer Marketing Analytics AI Team")
+st.set_page_config(page_title="Your Supervised 3 AI Agent Customer Marketing Analytics Team")
+st.title("Your Supervised 3 AI Agent Customer Marketing Analytics Team")
 
 with st.expander("I'm a complete Customer Analytics Marketing Team. I have 3 core agents. (See more.)"):
 
@@ -858,14 +864,6 @@ def display_chat_history():
 
 # Render current messages from StreamlitChatMessageHistory
 display_chat_history()
-
-
-"Make a table of the revenue generated in transactions table for the top 5 products? Use products table's suggested price for the sales revenue and a unit quantity of 1 for all transactions. Sort descending and show the product id and product description. Only use the Business Intelligence Expert for this task. Don't use the Product Expert or Marketing Email Writer."
-
-
-"Find the top 20 email subscribers ranked by probability of purchase (p1 lead score in the leads_scored table) who have have not purchased any courses yet? Have the Product Expert collect information on the 5-Course R-Track for use with the Marketing Expert. Have the Marketing Expert write a compelling marketing email."
-
-"What courses are inside the 5-Course R-Track? Use the Product Expert only. Do not use the Business Intelligence Expert or the Marketing Email Writer."
 
 if question := st.chat_input("Enter your question here:", key="query_input"):
     with st.spinner("Thinking..."):
