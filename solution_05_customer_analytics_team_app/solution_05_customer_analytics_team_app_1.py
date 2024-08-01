@@ -13,11 +13,9 @@
 
 # EXAMPLE QUESTIONS
 
-# "Make a table of the revenue generated in transactions table for the top 5 products? Use products table's suggested price for the sales revenue and a unit quantity of 1 for all transactions. Sort descending and show the product id and product description. Only use the Business Intelligence Expert for this task. Don't use the Product Expert or Marketing Email Writer."
+# Find the top 20 email subscribers ranked by probability of purchase (p1 lead score in the leads_scored table) who have have not purchased any courses yet? Have the Product Expert collect information on the 5-Course R-Track for use with the Marketing Expert. Have the Marketing Expert write a compelling marketing email.
 
-# "Find the top 20 email subscribers ranked by probability of purchase (p1 lead score in the leads_scored table) who have have not purchased any courses yet? Have the Product Expert collect information on the 5-Course R-Track for use with the Marketing Expert. Have the Marketing Expert write a compelling marketing email."
-
-# "What courses are inside the 5-Course R-Track? Use the Product Expert only. Do not use the Business Intelligence Expert or the Marketing Email Writer."
+# What courses are inside the 5-Course R-Track? Use the Product Expert only. Do not use the Business Intelligence Expert or the Marketing Email Writer.
 
 
 # * LIBRARIES
@@ -80,8 +78,32 @@ PATH_TRANSACTIONS_DATABASE = "sqlite:///data/database-sql-transactions/leads_sco
 
 os.environ["OPENAI_API_KEY"] = yaml.safe_load(open('../credentials.yml'))['openai']
 
+# * STREAMLIT APP SETUP ----
+
+st.set_page_config(page_title="Your Supervised 3 AI Agent Customer Marketing Analytics Team")
+st.title("Your Supervised 3 AI Agent Customer Marketing Analytics Team")
+
+with st.expander("I'm a complete Customer Analytics Marketing Team. I have 3 core agents. (See more.)"):
+
+    st.markdown(
+        """
+        I'm a complete Customer Analytics Marketing Team. I have 3 core agents that have the following skills:
+        1. **Product Expert:** Can explain details of contents inside the courses from the course sales pages. Do not have the Product Expert write emails (the Marketing Expert shoudl do this). 
+        2. **Business Intelligence Expert:** Has knowledge of the company's customer transactions database. Has access to the customer SQL database that includes SQL tables containing information on customers, lead scores (how likely they are to buy), transactions, courses purchased, and types of products. Can write SQL, produce data in table and charts. 
+        3. **Marketing_Email_Writer:** Is skilled at drafting marketing emails using information from the Product_Expert to help explain what's inside various products that may be of benefit to the customer. Uses SQL queries and data from the Business_Intelligence_Expert to target customers by their email address and products that they have not currently purchased. 
+        
+        Use us to accomplish data-driven marketing tasks like creating persuasive emails for customers who have not yet purchased a product. 
+        """
+    )
+
+model_option = st.sidebar.selectbox(
+    "Choose OpenAI model",
+    ["gpt-4o-mini", "gpt-4o", "gpt-3.5-turbo"],
+    index=0
+)
+
 OPENAI_LLM = ChatOpenAI(
-    model = "gpt-4o-mini"
+    model = model_option,
 )
 
 # *** SUPERVISOR AGENT ***
@@ -779,6 +801,8 @@ def business_intelligence_expert_node(state):
         "num_steps": num_steps
     })
     
+    print(result)
+    
     return {
         "messages": [AIMessage(content=result['summary'], additional_kwargs=result, name='Business_Intelligence_Expert')],
         'num_steps': 1
@@ -831,30 +855,10 @@ app = workflow.compile()
 
 # *** STREAMLIT ***
 
-# * STREAMLIT APP SETUP ----
-
-st.set_page_config(page_title="Your Supervised 3 AI Agent Customer Marketing Analytics Team")
-st.title("Your Supervised 3 AI Agent Customer Marketing Analytics Team")
-
-with st.expander("I'm a complete Customer Analytics Marketing Team. I have 3 core agents. (See more.)"):
-
-    st.markdown(
-        """
-        I'm a complete Customer Analytics Marketing Team. I have 3 core agents that have the following skills:
-        1. **Product Expert:** Can explain details of contents inside the courses from the course sales pages. Do not have the Product Expert write emails (the Marketing Expert shoudl do this). 
-        2. **Business Intelligence Expert:** Has knowledge of the company's customer transactions database. Has access to the customer SQL database that includes SQL tables containing information on customers, lead scores (how likely they are to buy), transactions, courses purchased, and types of products. Can write SQL, produce data in table and charts. 
-        3. **Marketing_Email_Writer:** Is skilled at drafting marketing emails using information from the Product_Expert to help explain what's inside various products that may be of benefit to the customer. Uses SQL queries and data from the Business_Intelligence_Expert to target customers by their email address and products that they have not currently purchased. 
-        
-        Use us to accomplish data-driven marketing tasks like creating persuasive emails for customers who have not yet purchased a product. 
-        """
-    )
-
 # Set up memory
 msgs = StreamlitChatMessageHistory(key="langchain_messages")
 if len(msgs.messages) == 0:
     msgs.add_ai_message("How can I help you?")
-
-view_messages = st.expander("View the message contents in session state")
 
 # Function to display chat messages including Plotly charts and dataframes
 def display_chat_history():
