@@ -76,7 +76,11 @@ with st.expander("I'm a complete stock analysis tool with researcher and chart c
 
     st.markdown(
         """
-        TODO
+        I make it easy to visualize stock analysis with access to the `yfinance` library for stock data. I'm run by 3 agents:
+        
+        1. **Supervisor:** Decides which sub-agent to route tasts to. Either Researcher or Chart Coder.
+        2. **Researcher:** Researches stocks, has access to web data, and helps the coder generate code to accomplish the task. 
+        3. **Chart Coder:** Generates Plotly visualizations for interactive stock analysis. 
         """
     )
 
