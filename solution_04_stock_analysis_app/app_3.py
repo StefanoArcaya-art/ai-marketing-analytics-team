@@ -1,4 +1,5 @@
 
+# What is a moving average in stock analysis?
 
 # Make a 5-year chart of SPY. End on August 1, 2024. Add a 50-day and 200-day moving average.
 
@@ -70,8 +71,6 @@ model_option = st.sidebar.selectbox(
 
 MODEL = model_option
 
-# MODEL = 'gpt-4o-mini'
-
 # * Create tools
 
 tavily_tool = TavilySearchResults(max_results=5)
@@ -79,7 +78,6 @@ tavily_tool = TavilySearchResults(max_results=5)
 python_repl_tool = PythonREPLTool()
 
 # * Create Agent Supervisor
-#   - Supervisor has 1 role: Pick which team member to send to (or if finished)
 
 subagent_names = ["Researcher", "Coder"]
 
@@ -162,9 +160,9 @@ researcher_agent = create_agent_with_tools(
 
 
 # * Coder Agent
-# TODO - MODIFY THIS TO PRODUCE THE CHART
 
-# * NEW: Need to return just the code
+# *** NEW - MODIFY THIS TO PRODUCE THE CHART
+
 @tool
 def python_code_extractor_tool(input_text):
     """Extracts code from text"""
@@ -232,7 +230,6 @@ fig.update_traces(line=dict(color='#3381ff', width=0.65)))
 
 # * LANGGRAPH
 
-#   - NEW Skill: Annotated Sequences
 class GraphState(TypedDict):
     messages: Annotated[Sequence[BaseMessage], operator.add]
     num_steps: Annotated[Sequence[int], operator.add]
@@ -306,18 +303,6 @@ workflow.set_entry_point("supervisor")
 app = workflow.compile()
 
 
-# TEST 
-# result = app.invoke(
-#     input = {"messages": [HumanMessage(content="Make a 5-year chart of SPY. End on August 1, 2024. Add a 50-day and 200-day moving average.")]},
-#     config = {"recursion_limit": 10},
-# )
-
-# result_json = result['chart_plotly_json']
-
-# fig = pio.from_json(result_json)
-# fig
-
-
 # * STREAMLIT 
 
 # Set up memory
@@ -363,12 +348,50 @@ if question := st.chat_input("Enter your question here:", key="query_input"):
             print(e)
         
         if not error_occured:
+            
+            if 'chart_plotly_error' in result:
+                
 
-            if result['chart_plotly_error'] is False:
-                # Chart was requested and  produced correctly
+                if result['chart_plotly_error'] is False:
+                    # Chart was requested and  produced correctly
+                    
+                    response_plot = pio.from_json(result['chart_plotly_json'])
+                    
+                    response_text = "## Result:\n\n"
+                    for message in result['messages']:
+                        if message.name:
+                            response_text += f"### **Team Member:** {message.name}\n\n"
+                            response_text += f"\n\n{message.content}\n"
+                        response_text += "---\n"
+
+                    # Store the plot and keep its index
+                    plot_index = len(st.session_state.plots)
+                    st.session_state.plots.append(response_plot)
+
+                    # Store the response text and plot index in the messages
+                    msgs.add_ai_message(response_text)
+                    msgs.add_ai_message(f"PLOT_INDEX:{plot_index}")
+
+                    st.plotly_chart(response_plot)
+                    with st.expander("Chart details:"):
+                        st.chat_message("ai").write(response_text)
+                else:
+                    # Chart error occurred, return Table instead
+                    response_text = f"I apologize. There was an error during the plotting process. Returning the agent analysis...\n\n```"
+                    
+                    response_text = response_text + "## Result:\n\n"
+                    for message in result['messages']:
+                        if message.name:
+                            response_text += f"### **Team Member:** {message.name}\n\n"
+                            response_text += f"\n\n{message.content}\n"
+                        response_text += "---\n"
+
+                    # Store the response text and plot index in the messages
+                    msgs.add_ai_message(response_text)
+                    st.chat_message("ai").write(response_text)
                 
-                response_plot = pio.from_json(result['chart_plotly_json'])
-                
+            else:
+                # No chart requested
                 response_text = "## Result:\n\n"
                 for message in result['messages']:
                     if message.name:
@@ -376,32 +399,13 @@ if question := st.chat_input("Enter your question here:", key="query_input"):
                         response_text += f"\n\n{message.content}\n"
                     response_text += "---\n"
 
-                # Store the plot and keep its index
-                plot_index = len(st.session_state.plots)
-                st.session_state.plots.append(response_plot)
-
                 # Store the response text and plot index in the messages
                 msgs.add_ai_message(response_text)
-                msgs.add_ai_message(f"PLOT_INDEX:{plot_index}")
-
-                st.plotly_chart(response_plot)
                 st.chat_message("ai").write(response_text)
-            else:
-                # Chart error occurred, return Table instead
-                response_text = f"I apologize. There was an error during the plotting process. Returning the agent analysis...\n\n```"
                 
-                response_text = response_text + "## Result:\n\n"
-                for message in result['messages']:
-                    if message.name:
-                        response_text += f"### **Team Member:** {message.name}\n\n"
-                        response_text += f"\n\n{message.content}\n"
-                    response_text += "---\n"
-
-                # Store the response text and plot index in the messages
-                msgs.add_ai_message(response_text)
-                st.chat_message("ai").write(response_text)
         else:
             # An unknown error occurred
             response_text = f"An error occurred. I apologize. Please try again or format the question differently and I'll try my best to provide a helpful answer."
             msgs.add_ai_message(response_text)
             st.chat_message("ai").write(response_text)
+            
