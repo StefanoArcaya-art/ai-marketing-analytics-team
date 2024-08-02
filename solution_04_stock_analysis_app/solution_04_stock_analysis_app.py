@@ -1,3 +1,18 @@
+# BUSINESS SCIENCE UNIVERSITY
+# PYTHON FOR GENERATIVE AI COURSE
+# MULTI-AGENTS (AGENTIAL SUPERVISION)
+# ***
+
+# CHALLENGE 4: CREATE AN APPLICATION THAT HELPS USERS ANALYZE STOCKS USING THE 01_stock_analysis_supervisor_agent
+
+# DIFFICULTY: INTERMEDIATE
+
+# SPECIFIC ACTIONS:
+#  1. Analysis should have chat memory 
+#  2. Suggest any improvements
+
+
+# EXAMPLE QUESTIONS:
 
 # What is a moving average in stock analysis?
 
