@@ -357,15 +357,12 @@ if question := st.chat_input("Enter your question here:", key="query_input"):
         st.chat_message("human").write(question)
         msgs.add_user_message(question)
         
-        # Run the app
-        inputs = app.invoke(
-            input = {"messages": [HumanMessage(content=question)]},
-            config = {"recursion_limit": 10, "configurable": {"thread_id": "1"}},
-        )
-        
         error_occurred = False
         try: 
-            result = app.invoke(inputs)
+            result = app.invoke(
+                input = {"messages": [HumanMessage(content=question)]},
+                config = {"recursion_limit": 10, "configurable": {"thread_id": "1"}},
+            )
         except Exception as e:
             error_occurred = True
             print(e)
