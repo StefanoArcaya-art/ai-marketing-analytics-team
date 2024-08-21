@@ -8,8 +8,6 @@
 # 2. RAG with Memory
 # 3. Business Intelligence App with Flow Control
 
-
-
 # * LIBRARIES
 
 from langchain_community.vectorstores import Chroma
