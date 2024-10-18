@@ -460,14 +460,14 @@ Image(app.get_graph().draw_mermaid_png())
 QUESTION = """
 Which 10 customers have the highest p1 probability of purchase who have NOT purchased "Learning Labs Pro - Paid Course"? 
 """
-inputs = {"user_question": QUESTION, "num_steps": 0}
+inputs = {"user_question": QUESTION}
 for s in app.stream(inputs):
     print(s)
     
 QUESTION = """
 What are the top 5 product sales revenue by product name? Make a donut chart. Use suggested price for the sales revenue and a unit quantity of 1 for all transactions.
 """
-inputs = {"user_question": QUESTION, "num_steps": 0}
+inputs = {"user_question": QUESTION}
 for s in app.stream(inputs):
     print(s)
 
@@ -487,14 +487,14 @@ fig
 QUESTION = """
 What are the total sales by month-year? Use suggested price as a proxy for revenue for each transaction and a quantity of 1. Make a chart of sales over time. 
 """
-inputs = {"user_question": QUESTION, "num_steps": 0}
+inputs = {"user_question": QUESTION}
 for s in app.stream(inputs):
     print(s)
 
 QUESTION = """
 What are the total sales by charge_country for the top 10 countries? Make a horizontal bar chart with the charge_country descending. 
 """
-inputs = {"user_question": QUESTION, "num_steps": 0}
+inputs = {"user_question": QUESTION}
 for s in app.stream(inputs):
     print(s)
 

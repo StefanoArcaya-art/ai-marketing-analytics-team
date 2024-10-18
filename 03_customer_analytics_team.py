@@ -11,21 +11,16 @@
 # * LIBRARIES
 
 from langchain_community.vectorstores import Chroma
-
 from langchain_core.output_parsers import StrOutputParser, JsonOutputParser, BaseOutputParser
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.output_parsers.openai_functions import JsonOutputFunctionsParser
 from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
-
 from langchain.prompts import PromptTemplate
-
 from langchain.chains import create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.chains import create_history_aware_retriever
-
 from langchain_community.utilities import SQLDatabase
 from langchain.chains import create_sql_query_chain
-
 from langchain_core.tools import tool
 from langchain_experimental.utilities import PythonREPL
 
@@ -34,7 +29,6 @@ from langgraph.graph import StateGraph, END
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
 from typing import Annotated, Sequence, TypedDict
-
 import operator
 
 import pandas as pd
@@ -64,9 +58,13 @@ PATH_TRANSACTIONS_DATABASE = "sqlite:///data/database-sql-transactions/leads_sco
 
 os.environ["OPENAI_API_KEY"] = yaml.safe_load(open('../credentials.yml'))['openai']
 
+EMBEDDINGS_MODEL = 'text-embedding-ada-002'
+LLM_MODEL = 'gpt-4o-mini'
+
 OPENAI_LLM = ChatOpenAI(
-    model = "gpt-4o-mini"
+    model = LLM_MODEL
 )
+
 
 # *** SUPERVISOR AGENT ***
 
@@ -185,7 +183,7 @@ rag_preprocessor = create_rag_question_preprocessor_agent(llm=OPENAI_LLM, temper
 def create_rag_agent(db_path, llm, temperature = 0):
     
     embedding_function = OpenAIEmbeddings(
-        model='text-embedding-ada-002',
+        model=EMBEDDINGS_MODEL,
     )
     
     llm.temperature = temperature
@@ -224,14 +222,6 @@ def create_rag_agent(db_path, llm, temperature = 0):
     
     question_answer_chain = create_stuff_documents_chain(llm, qa_prompt)
     
-
-    prompt = ChatPromptTemplate.from_template(
-        """Answer the question based only on the following context:
-        {context}
-
-        Question: {question}
-        """
-    )
     
     rag_chain = create_retrieval_chain(history_aware_retriever, question_answer_chain)
     
@@ -491,7 +481,6 @@ def create_business_intelligence_agent(db_path, llm, temperature=0):
         chart_plotly_json: dict
         chart_plotly_error: bool
         summary: str
-        num_steps : int
         
     def preprocess_routing(state):
         print("---ROUTER---")
@@ -499,9 +488,7 @@ def create_business_intelligence_agent(db_path, llm, temperature=0):
         
         chat_history = state.get("chat_history")
         
-        num_steps = state.get("num_steps")
         
-        num_steps += 1
         
         # Chart Routing and SQL Prep
         response = routing_preprocessor.invoke({"initial_question": question, "chat_history": chat_history})
@@ -513,8 +500,9 @@ def create_business_intelligence_agent(db_path, llm, temperature=0):
         return {
             "formatted_user_question_sql_only": formatted_user_question_sql_only,
             "routing_preprocessor_decision": routing_preprocessor_decision,
-            "num_steps": num_steps
         }
+        
+
 
     def generate_sql(state):
         print("---GENERATE SQL---")
@@ -524,14 +512,10 @@ def create_business_intelligence_agent(db_path, llm, temperature=0):
         if question is None:
             question = state.get("user_question")
         
-        num_steps = state.get("num_steps")
-        
-        num_steps += 1
-        
         # Generate SQL
         sql_query = sql_generator.invoke({"question": question})
         
-        return {"sql_query": sql_query, "num_steps": num_steps}
+        return {"sql_query": sql_query}
 
 
     def convert_dataframe(state):
@@ -539,16 +523,9 @@ def create_business_intelligence_agent(db_path, llm, temperature=0):
 
         sql_query = state.get("sql_query")
         
-        num_steps = state.get("num_steps")
-        
-        num_steps += 1
-        
-        # Remove trailing ' that gpt-3.5-turbo sometimes leaves
-        sql_query = sql_query.rstrip("'")
-        
         df = pd.read_sql(sql_query, conn)
         
-        return {"data": dict(df), "num_steps": num_steps}
+        return {"data": dict(df)}
 
 
     def decide_chart_or_table(state):
@@ -562,13 +539,9 @@ def create_business_intelligence_agent(db_path, llm, temperature=0):
         
         data = state.get("data")
         
-        num_steps = state.get("num_steps")
-        
-        num_steps += 1
-        
         chart_generator_instructions = chart_instructor.invoke({"question": question, "data": data})
         
-        return {"chart_generator_instructions": chart_generator_instructions, "num_steps": num_steps}
+        return {"chart_generator_instructions": chart_generator_instructions}
 
 
     def generate_chart(state):
@@ -578,9 +551,7 @@ def create_business_intelligence_agent(db_path, llm, temperature=0):
         
         data = state.get("data")
         
-        num_steps = state.get("num_steps")
-        
-        num_steps += 1
+        # NEW: Charting Logic
         
         response = chart_generator.invoke({"chart_instructions": chart_instructions, "data": data})
         
@@ -600,6 +571,8 @@ def create_business_intelligence_agent(db_path, llm, temperature=0):
                 result_dict = ast.literal_eval(result)
             
                 fig = pio.from_json(json.dumps(result_dict))
+
+                fig.show()
             except:
                 chart_plotly_error = True
             
@@ -607,7 +580,7 @@ def create_business_intelligence_agent(db_path, llm, temperature=0):
             "chart_plotly_code": code, 
             "chart_plotly_json": result, 
             "chart_plotly_error": chart_plotly_error,
-            "num_steps": num_steps,
+            
         }
         
     def summarize_results(state):
@@ -615,11 +588,7 @@ def create_business_intelligence_agent(db_path, llm, temperature=0):
         
         result = summarizer.invoke({"results": dict(state)})
         
-        num_steps = state.get("num_steps")
-        
-        num_steps += 1
-        
-        return {"summary": result, "num_steps": num_steps}
+        return {"summary": result}
         
         
     def state_printer(state):
@@ -634,8 +603,6 @@ def create_business_intelligence_agent(db_path, llm, temperature=0):
         if state['routing_preprocessor_decision'] == "chart":
             print(f"Chart Code: \n{pprint(state['chart_plotly_code'])}")
             print(f"Chart Error: {state['chart_plotly_error']}")
-        
-        print(f"Num Steps: {state['num_steps']}")
 
     # * WORKFLOW DAG
 
@@ -680,7 +647,7 @@ Image(business_intelligence_agent.get_graph().draw_mermaid_png())
 # QUESTION = """
 # What are the top 5 product sales revenue by product name? Make a donut chart. Use suggested price for the sales revenue and a unit quantity of 1 for all transactions.
 # """
-# result = business_intelligence_agent.invoke({"user_question": QUESTION, "chat_history": [HumanMessage(content=QUESTION)], "num_steps": 0})
+# result = business_intelligence_agent.invoke({"user_question": QUESTION, "chat_history": [HumanMessage(content=QUESTION)]})
 
 # result
 
@@ -748,7 +715,6 @@ pprint(result)
 
 class GraphState(TypedDict):
     messages: Annotated[Sequence[BaseMessage], operator.add]
-    num_steps: Annotated[Sequence[int], operator.add]
     next: str
     
 # Helper functions to get last question that the Human asked
@@ -777,14 +743,12 @@ def supervisor_node(state):
     
     print(result)
     
-    return {'next': result['next'], 'num_steps': 1}
+    return {'next': result['next']}
 
 
 def product_expert_node(state):
     
     print("---PRODUCT EXPERT---")
-    
-    # print(state["messages"])
     
     messages = state.get("messages")
     
@@ -797,11 +761,8 @@ def product_expert_node(state):
     
     result = product_expert_agent.invoke({"input": last_question, "chat_history": messages})
     
-    # print(result)
-    
     return {
-        "messages": [AIMessage(content=result['answer'], name='Product_Expert')],
-        'num_steps': 1
+        "messages": [AIMessage(content=result['answer'], name='Product_Expert')]
     }
     
 def business_intelligence_expert_node(state):
@@ -809,21 +770,18 @@ def business_intelligence_expert_node(state):
     print("---BUSINESS INTELLIGENCE EXPERT---")
     
     messages = state.get("messages")
-    num_steps = state.get("num_steps")
-    
+
     last_question = get_last_human_message(messages)
     if last_question:
         last_question = last_question.content
     
     result = business_intelligence_agent.invoke({
         "user_question": last_question, 
-        "chat_history": messages, 
-        "num_steps": num_steps
+        "chat_history": messages
     })
     
     return {
         "messages": [AIMessage(content=result['summary'], additional_kwargs=result, name='Business_Intelligence_Expert')],
-        'num_steps': 1
     }
 
 
@@ -832,7 +790,6 @@ def email_writer_node(state):
     print("---MARKETING EMAIL WRITER---")
     
     messages = state.get("messages")
-    num_steps = state.get("num_steps")
     
     last_question = get_last_human_message(messages)
     if last_question:
@@ -842,7 +799,6 @@ def email_writer_node(state):
     
     return {
         "messages": [AIMessage(content=result, name='Marketing_Email_Writer')],
-        'num_steps': 1
     }
 
 # * WORKFLOW DAG
