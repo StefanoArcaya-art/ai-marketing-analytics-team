@@ -39,7 +39,6 @@ from IPython.display import Image
 # * LLM SELECTION
 
 MODEL = "gpt-4o-mini"
-# MODEL = "gpt-3.5-turbo"
 # MODEL = "gpt-4o"
 
 # * API KEYS
@@ -91,6 +90,8 @@ function_def = {
         "required": ["next"],
     },
 }
+
+
 
 prompt = ChatPromptTemplate.from_messages(
     [

@@ -29,7 +29,6 @@ from pprint import pprint
 os.environ["OPENAI_API_KEY"] = yaml.safe_load(open('../credentials.yml'))['openai']
 
 OPENAI_LLM = 'gpt-4o-mini'
-# OPENAI_LLM = 'gpt-3.5-turbo'
 # OPENAI_LLM = 'gpt-4o'
 
 
