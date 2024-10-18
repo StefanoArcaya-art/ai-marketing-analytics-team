@@ -8,10 +8,8 @@
 # LIBRARIES
 
 from langchain.document_loaders import WebBaseLoader
-
 from langchain_community.vectorstores import Chroma
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
@@ -114,7 +112,6 @@ for document in documents_clean:
 documents_clean
 
 # Assess Length
-#  Note - GPT 3.5 can only handle so much text; May need to switch over to GPT-4o to handle larger tokens
 
 for document in documents_clean:
     print(document.metadata)
@@ -233,6 +230,9 @@ result = rag_chain_2.invoke("Is the 4-Course R-Track Open for Enrollment?")
 
 pprint(result)
 
+# * Conclusion: The Non-Chunked LLM quickly discovered that the 4-course R-Track was closed for enrollment
+
+# * More tests
 
 result = rag_chain_2.invoke("What courses are included in the 5-Course R Track?")
 
@@ -241,9 +241,6 @@ pprint(result)
 result = rag_chain_2.invoke("What courses are included in the 4-Course R Track?")
 
 pprint(result)
-
-# * NOTE: Switched from gpt-3.5-turbo to gpt-4o-mini due to token length issue (caused Error Code 400)
-# BadRequestError: Error code: 400 - {'error': {'message': "This model's maximum context length is 16385 tokens. However, your messages resulted in 23340 tokens. Please reduce the length of the messages.", 'type': 'invalid_request_error', 'param': 'messages', 'code': 'context_length_exceeded'}}
 
 result = rag_chain_2.invoke("What is Learning Labs PRO?")
 
