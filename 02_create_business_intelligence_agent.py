@@ -6,25 +6,19 @@
 # Goal: The project 2 business intelligence AI copilot
 
 # Requirements:
-# pip install langgraph==0.0.48 langchain_groq==0.5.0
+# pip install langgraph==0.0.48 
 
 
 # LIBRARIES
 
 from langchain_openai import ChatOpenAI
-from langchain_groq import ChatGroq
-
 from langchain.prompts import PromptTemplate
-
 from langchain_core.output_parsers import JsonOutputParser, StrOutputParser
 from langchain_core.output_parsers import BaseOutputParser
-
 from langchain_community.utilities import SQLDatabase
 from langchain.chains import create_sql_query_chain
-
 from langchain_core.tools import tool
 from langchain_experimental.utilities import PythonREPL
-
 from langgraph.graph import END, StateGraph
 
 import os
@@ -48,17 +42,39 @@ from IPython.display import Image
 # AI SETUP
 
 os.environ["OPENAI_API_KEY"] = yaml.safe_load(open('../credentials.yml'))['openai']
-os.environ["GROQ_API_KEY"] = yaml.safe_load(open("../credentials.yml"))['groq']
 
 OPENAI_LLM = ChatOpenAI(
     model = "gpt-4o-mini"
 )
 
-GROQ_LLM = ChatGroq(
-    model="llama3-70b-8192",
-)
-
 llm = OPENAI_LLM
+
+# SQL DATABASE SETUP
+
+PATH_DB = "sqlite:///data/database-sql-transactions/leads_scored.db"
+
+sql_engine = sql.create_engine(PATH_DB)
+
+conn = sql_engine.connect()
+
+# HELPER FUNCTIONS
+
+def extract_sql_code(text):
+    sql_code_match = re.search(r'```sql(.*?)```', text, re.DOTALL)
+    sql_code_match_2 = re.search(r"SQLQuery:\s*(.*)", text)
+    if sql_code_match:
+        sql_code = sql_code_match.group(1).strip()
+        return sql_code
+    if sql_code_match_2:
+        sql_code = sql_code_match_2.group(1).strip()
+        return sql_code
+    else:
+        sql_code_match = re.search(r"sql(.*?)'", text, re.DOTALL)
+        if sql_code_match:
+            sql_code = sql_code_match.group(1).strip()
+            return sql_code
+        else:
+            return None
 
 # * AGENTS
 
@@ -91,28 +107,7 @@ routing_preprocessor
 
 # * SQL Agent
 
-PATH_DB = "sqlite:///data/database-sql-transactions/leads_scored.db"
-
 db = SQLDatabase.from_uri(PATH_DB)
-
-
-# SQL Parser for output standardization  
-
-def extract_sql_code(text):
-    sql_code_match = re.search(r'```sql(.*?)```', text, re.DOTALL)
-    if sql_code_match:
-        sql_code = sql_code_match.group(1).strip()
-        return sql_code
-    else:
-        sql_code_match = re.search(r"sql(.*?)'", text, re.DOTALL)
-        if sql_code_match:
-            sql_code = sql_code_match.group(1).strip()
-            return sql_code
-        else:
-            return None
-
-# extract_sql_code("```sql\nSELECT * FROM Transactions\n```")
-
 
 class SQLOutputParser(BaseOutputParser):
     def parse(self, text: str):
@@ -161,12 +156,6 @@ sql_generator = (
 # result = sql_generator.invoke({'question': "which 5 customers have the highest p1 probability of purchase?"})
 
 # pprint(result)
-
-# * Dataframe Conversion
-    
-sql_engine = sql.create_engine(PATH_DB)
-
-conn = sql_engine.connect()
 
 
 # * Chart Instructor Agent
@@ -318,15 +307,10 @@ class GraphState(TypedDict):
     chart_plotly_code: str
     chart_plotly_json: dict
     chart_plotly_error: bool
-    num_steps : int
     
 def preprocess_routing(state):
     print("---ROUTER---")
     question = state.get("user_question")
-    
-    num_steps = state.get("num_steps")
-    
-    num_steps += 1
     
     # Chart Routing and SQL Prep
     response = routing_preprocessor.invoke({"initial_question": question})
@@ -338,7 +322,6 @@ def preprocess_routing(state):
     return {
         "formatted_user_question_sql_only": formatted_user_question_sql_only,
         "routing_preprocessor_decision": routing_preprocessor_decision,
-        "num_steps": num_steps
     }
     
 
@@ -351,14 +334,10 @@ def generate_sql(state):
     if question is None:
         question = state.get("user_question")
     
-    num_steps = state.get("num_steps")
-    
-    num_steps += 1
-    
     # Generate SQL
     sql_query = sql_generator.invoke({"question": question})
     
-    return {"sql_query": sql_query, "num_steps": num_steps}
+    return {"sql_query": sql_query}
 
 
 def convert_dataframe(state):
@@ -366,16 +345,9 @@ def convert_dataframe(state):
 
     sql_query = state.get("sql_query")
     
-    num_steps = state.get("num_steps")
-    
-    num_steps += 1
-    
-    # Remove trailing ' that gpt-3.5-turbo sometimes leaves
-    sql_query = sql_query.rstrip("'")
-    
     df = pd.read_sql(sql_query, conn)
     
-    return {"data": dict(df), "num_steps": num_steps}
+    return {"data": dict(df)}
 
 
 def decide_chart_or_table(state):
@@ -389,13 +361,9 @@ def instruct_chart_generator(state):
     
     data = state.get("data")
     
-    num_steps = state.get("num_steps")
-    
-    num_steps += 1
-    
     chart_generator_instructions = chart_instructor.invoke({"question": question, "data": data})
     
-    return {"chart_generator_instructions": chart_generator_instructions, "num_steps": num_steps}
+    return {"chart_generator_instructions": chart_generator_instructions}
 
 
     
@@ -406,10 +374,6 @@ def generate_chart(state):
     chart_instructions = state.get("chart_generator_instructions")
     
     data = state.get("data")
-    
-    num_steps = state.get("num_steps")
-    
-    num_steps += 1
     
     # NEW: Charting Logic
     
@@ -422,9 +386,6 @@ def generate_chart(state):
         code = dict(response)['invalid_tool_calls'][0]['args']
     
     result = repl.run(code)
-    
-    # Add plot to global environment
-    globals()["chart_plotly_json"] = result
     
     chart_plotly_error = False
     if "error" in result[:40].lower():
@@ -443,7 +404,6 @@ def generate_chart(state):
         "chart_plotly_code": code, 
         "chart_plotly_json": result, 
         "chart_plotly_error": chart_plotly_error,
-        "num_steps": num_steps,
     }
     
     
@@ -460,7 +420,6 @@ def state_printer(state):
         print(f"Chart Code: \n{pprint(state['chart_plotly_code'])}")
         print(f"Chart Error: {state['chart_plotly_error']}")
     
-    print(f"Num Steps: {state['num_steps']}")
 
 # * WORKFLOW DAG
 
