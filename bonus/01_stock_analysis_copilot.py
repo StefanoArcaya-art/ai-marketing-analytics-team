@@ -111,7 +111,7 @@ llm = ChatOpenAI(model=MODEL)
 
 supervisor_chain = (
     prompt
-    | llm.bind_functions(functions=[function_def], function_call="route")
+    | llm.bind(functions=[function_def], function_call={"name": "route"})
     | JsonOutputFunctionsParser()
 )
 
