@@ -253,7 +253,6 @@ fig.update_traces(line=dict(color='#3381ff', width=0.65)))
 
 class GraphState(TypedDict):
     messages: Annotated[Sequence[BaseMessage], operator.add]
-    num_steps: Annotated[Sequence[int], operator.add]
     # * NEW
     chart_plotly_json: str
     chart_plotly_error: bool
@@ -266,7 +265,7 @@ def supervisor_node(state):
     
     print(result)
     
-    return {'next': result['next'], 'num_steps': 1}
+    return {'next': result['next']}
 
 def research_node(state):
     
@@ -274,7 +273,6 @@ def research_node(state):
     
     return {
         "messages": [AIMessage(content=result["output"], name="Researcher")],
-        'num_steps': 1
     }
 
 def coder_node(state):
@@ -300,7 +298,6 @@ def coder_node(state):
         "messages": [AIMessage(content=result["output"], name="Coder")],
         "chart_plotly_json": chart_plotly_json,
         "chart_plotly_error": chart_plotly_error,
-        'num_steps': 1
     }
 
 
