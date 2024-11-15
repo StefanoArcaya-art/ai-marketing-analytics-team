@@ -103,7 +103,7 @@ pprint(clean_text(documents[0].page_content))
 
 # Clean all documents
 
-documents_clean = copy.deepcopy(documents)
+documents_clean = documents.copy()
 
 for document in documents_clean:
     document.page_content = clean_text(document.page_content)
