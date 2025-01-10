@@ -99,7 +99,7 @@ with st.expander("I'm a complete Customer Analytics Marketing Team. I have 3 cor
 
 model_option = st.sidebar.selectbox(
     "Choose OpenAI model",
-    ["gpt-4o-mini", "gpt-4o", "gpt-3.5-turbo"],
+    ["gpt-4o-mini", "gpt-4o",],
     index=0
 )
 

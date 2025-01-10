@@ -23,6 +23,7 @@ import yaml
 import os
 
 from pprint import pprint
+from IPython.display import Markdown
 
 # OPENAI API SETUP
 
@@ -31,6 +32,7 @@ os.environ["OPENAI_API_KEY"] = yaml.safe_load(open('../credentials.yml'))['opena
 OPENAI_LLM = 'gpt-4o-mini'
 # OPENAI_LLM = 'gpt-4o'
 
+OPENAI_EMBEDDING = 'text-embedding-3-large'
 
 # * Test out loading a single webpage
 #   Resource: https://api.python.langchain.com/en/latest/document_loaders/langchain_community.document_loaders.web_base.WebBaseLoader.html
@@ -110,6 +112,8 @@ for document in documents_clean:
     
 documents_clean
 
+len(documents_clean)
+
 # Assess Length
 
 for document in documents_clean:
@@ -138,7 +142,7 @@ len(documents_clean_recursive)
 # - See billing to add to your credit balance: https://platform.openai.com/account/billing/overview
 
 embedding_function = OpenAIEmbeddings(
-    model='text-embedding-ada-002',
+    model=OPENAI_EMBEDDING,
 )
 
 # ** Vector Store - Recursively Split Documents
@@ -147,13 +151,13 @@ embedding_function = OpenAIEmbeddings(
 # vectorstore_1 = Chroma.from_documents(
 #     documents_clean_recursive, 
 #     embedding=embedding_function, 
-#     persist_directory="data/data-rag-product-information/products_recursive.db"
+#     persist_directory="data/data-rag-product-information/products_recursive_2.db"
 # )
 
 # Connect to the Vector Store (Run all other times)
 vectorstore_1 = Chroma(
     embedding_function=embedding_function, 
-    persist_directory="data/data-rag-product-information/products_recursive.db"
+    persist_directory="data/data-rag-product-information/products_recursive_2.db"
 )
 
 vectorstore_1
@@ -171,18 +175,24 @@ retriever_1
 # vectorstore_2 = Chroma.from_documents(
 #     documents_clean, 
 #     embedding=embedding_function, 
-#     persist_directory="data/data-rag-product-information/products_clean.db"
+#     persist_directory="data/data-rag-product-information/products_clean_2.db"
 # )
 
 # Connect to the Vector Store (Run all other times)
 vectorstore_2 = Chroma(
     embedding_function=embedding_function, 
-    persist_directory="data/data-rag-product-information/products_clean.db"
+    persist_directory="data/data-rag-product-information/products_clean_2.db"
 )
 
 vectorstore_2
 
+vectorstore_2.similarity_search("Is the 4-Course R-Track Open for Enrollment?", k = 4)
+
 retriever_2 = vectorstore_2.as_retriever()
+
+
+
+
 
 # * Prompt template 
 
@@ -200,6 +210,8 @@ model = ChatOpenAI(
     model = OPENAI_LLM,
     temperature = 0.7,
 )
+
+model.invoke("What is the 4-Course R-Track?")
 
 # * RAG Chain
 
@@ -237,13 +249,29 @@ result = rag_chain_2.invoke("What courses are included in the 5-Course R Track?"
 
 pprint(result)
 
+Markdown(result)
+
+
+
 result = rag_chain_2.invoke("What courses are included in the 4-Course R Track?")
 
 pprint(result)
 
+
+
 result = rag_chain_2.invoke("What is Learning Labs PRO?")
 
 pprint(result)
+
+Markdown(result)
+
+
+
+result = rag_chain_2.invoke("What are some of the topics covered in Learning Labs PRO? Give me a few main data science areas covered.")
+
+pprint(result)
+
+Markdown(result)
 
 # CONCLUSIONS:
 # - My choice is to go with products_clean.db Vector Database in Production

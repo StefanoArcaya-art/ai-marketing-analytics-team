@@ -45,7 +45,7 @@ import json
 import re
 
 from pprint import pprint
-from IPython.display import Image
+from IPython.display import Image, Markdown
 
 # * DATABASE SETUP
 
@@ -132,13 +132,13 @@ def create_supervisor_agent(subagent_names: list, llm, temperature=0):
 
 supervisor_agent = create_supervisor_agent(subagent_names=subagent_names, llm=OPENAI_LLM, temperature=0.7)
 
-# QUESTION = "Is the 4-Course R-Track Open for Enrollment?"
-# result = supervisor_agent.invoke({"messages": [HumanMessage(content=QUESTION)]})
-# result
+QUESTION = "Is the 4-Course R-Track Open for Enrollment?"
+result = supervisor_agent.invoke({"messages": [HumanMessage(content=QUESTION)]})
+result
 
-# QUESTION = "What are the top 5 product sales revenue by product name? Make a donut chart. Use suggested price for the sales revenue and a unit quantity of 1 for all transactions."
-# result = supervisor_agent.invoke({"messages": [HumanMessage(content=QUESTION)]})
-# result
+QUESTION = "What are the top 5 product sales revenue by product name? Make a donut chart. Use suggested price for the sales revenue and a unit quantity of 1 for all transactions."
+result = supervisor_agent.invoke({"messages": [HumanMessage(content=QUESTION)]})
+result
 
 
 # *** PRODUCTS EXPERT RAG AGENT (PROJECT 1) ****
@@ -230,10 +230,10 @@ def create_rag_agent(db_path, llm, temperature = 0):
 
 product_expert_agent = create_rag_agent(PATH_PRODUCTS_VECTORDB, llm=OPENAI_LLM, temperature=0.7)
 
-# QUESTION = "Is the 4-Course R-Track Open for Enrollment?"
-# result = product_expert_agent.invoke({"input": QUESTION, "chat_history": [HumanMessage(content=QUESTION)]})
+QUESTION = "Is the 4-Course R-Track Open for Enrollment?"
+result = product_expert_agent.invoke({"input": QUESTION, "chat_history": [HumanMessage(content=QUESTION)]})
 
-# result
+result
 
 # result['answer']
 
@@ -644,12 +644,12 @@ business_intelligence_agent = create_business_intelligence_agent(db_path=PATH_TR
 Image(business_intelligence_agent.get_graph().draw_mermaid_png())
 
 
-# QUESTION = """
-# What are the top 5 product sales revenue by product name? Make a donut chart. Use suggested price for the sales revenue and a unit quantity of 1 for all transactions.
-# """
-# result = business_intelligence_agent.invoke({"user_question": QUESTION, "chat_history": [HumanMessage(content=QUESTION)]})
+QUESTION = """
+What are the top 5 product sales revenue by product name? Make a donut chart. Use suggested price for the sales revenue and a unit quantity of 1 for all transactions.
+"""
+result = business_intelligence_agent.invoke({"user_question": QUESTION, "chat_history": [HumanMessage(content=QUESTION)]})
 
-# result
+result
 
 # pprint(result['summary'])
 
@@ -700,21 +700,26 @@ def create_marketing_agent(llm, temperature = 1.0):
     
     return marketing_agent
 
-marketing_agent = create_marketing_agent(llm=OPENAI_LLM, temperature=1.2)
+marketing_agent = create_marketing_agent(llm=OPENAI_LLM, temperature=0)
 
-# HISTORY = [
-#     HumanMessage(content="Find the top 20 email subscribers who have have not purchased any courses yet? Collect information on the 5-Course R-Track. Write a compelling email."),
-#     AIMessage(content="The top 20 Emails are: 1. adfdno@gmail.com, ..., 20. ldkjn@gmail.com", name="Business_Intelligence_Expert"),
-#     AIMessage(content="The 5-Course R-Track includes the following courses:\n\n1. **Data Science for Business Part 1**: This course covers the fundamentals of data science for business using R and the tidyverse. It has 407 lessons and 33.9 hours of video content.\n\n2. **Data Science for Business Part 2**: This course focuses on solving a real-world churn problem using H2O AutoML and LIME for model explanations. It includes 220 lessons and 18.3 hours of video.\n\n3. **Shiny Web Applications Part 1**: In this course, students will learn how to build a predictive web application using Shiny, Flexdashboard, and XGBoost. It contains 238 lessons and 19.8 hours of video.\n\n4. **Shiny Web Applications Part 2**: This course teaches how to build scalable data science applications using R, Shiny, and AWS Cloud Technology. It includes 434 lessons and 35.1 hours of video.\n\n5. **High-Performance Time Series**: Designed to make participants experts in time series forecasting, this course has 549 lessons and 45.8 hours of video.\n\nOverall, the 5-Course R-Track includes 1,848 lessons, 152.9 hours of video, and various challenges to test skills.", name="Product_Expert")
-# ]
-# result = marketing_agent.invoke({'initial_question': HISTORY[0],'chat_history': HISTORY})
+HISTORY = [
+    HumanMessage(content="Find the top 20 email subscribers who have have not purchased any courses yet? Collect information on the 5-Course R-Track. Write a compelling email."),
+    AIMessage(content="The top 20 Emails are: 1. adfdno@gmail.com, ..., 20. ldkjn@gmail.com", name="Business_Intelligence_Expert"),
+    AIMessage(content="The 5-Course R-Track includes the following courses:\n\n1. **Data Science for Business Part 1**: This course covers the fundamentals of data science for business using R and the tidyverse. It has 407 lessons and 33.9 hours of video content.\n\n2. **Data Science for Business Part 2**: This course focuses on solving a real-world churn problem using H2O AutoML and LIME for model explanations. It includes 220 lessons and 18.3 hours of video.\n\n3. **Shiny Web Applications Part 1**: In this course, students will learn how to build a predictive web application using Shiny, Flexdashboard, and XGBoost. It contains 238 lessons and 19.8 hours of video.\n\n4. **Shiny Web Applications Part 2**: This course teaches how to build scalable data science applications using R, Shiny, and AWS Cloud Technology. It includes 434 lessons and 35.1 hours of video.\n\n5. **High-Performance Time Series**: Designed to make participants experts in time series forecasting, this course has 549 lessons and 45.8 hours of video.\n\nOverall, the 5-Course R-Track includes 1,848 lessons, 152.9 hours of video, and various challenges to test skills.", name="Product_Expert")
+]
+result = marketing_agent.invoke({'initial_question': HISTORY[0],'chat_history': HISTORY})
 
-# pprint(result)
+pprint(result)
+
+Markdown(result)
 
 # * LANGGRAPH
 
 class GraphState(TypedDict):
     messages: Annotated[Sequence[BaseMessage], operator.add]
+    final_email: str
+    final_email_title: str
+    email_list: list
     next: str
     
 # Helper functions to get last question that the Human asked
@@ -797,8 +802,11 @@ def email_writer_node(state):
         
     result = marketing_agent.invoke({'initial_question': last_question,'chat_history': messages})
     
+    # Final email
+    
     return {
         "messages": [AIMessage(content=result, name='Marketing_Email_Writer')],
+        "final_email": result,
     }
 
 # * WORKFLOW DAG
@@ -880,8 +888,11 @@ result = app.invoke(
     config = {"recursion_limit": 10},
 )
 
+result.keys()
 
 pprint(get_last_ai_message(result['messages'], target_name='Marketing_Email_Writer').content)
+
+Markdown(result['final_email'])
 
 result['messages']
 

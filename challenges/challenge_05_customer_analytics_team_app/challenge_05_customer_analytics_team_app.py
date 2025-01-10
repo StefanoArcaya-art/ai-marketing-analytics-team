@@ -8,5 +8,6 @@
 # DIFFICULTY: ADVANCED
 
 # SPECIFIC ACTIONS:
-#  1. App should have chat memory 
-#  2. Suggest any improvements
+#  1. Should be able to answer this question:
+
+# Find the top 20 email subscribers ranked by probability of purchase (p1 lead score in the leads_scored table) who have have not purchased any courses yet? Have the Product Expert collect information on the 5-Course R-Track for use with the Marketing Expert. Have the Marketing Expert write a compelling marketing email.

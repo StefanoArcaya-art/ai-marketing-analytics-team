@@ -37,7 +37,7 @@ import plotly as pl
 import plotly.express as px
 import plotly.io as pio
 
-from IPython.display import Image
+from IPython.display import Image, Markdown
 
 # AI SETUP
 
@@ -105,6 +105,8 @@ routing_preprocessor = routing_preprocessor_prompt | llm | JsonOutputParser()
 routing_preprocessor
 
 
+routing_preprocessor.invoke({"initial_question": "What are the top 5 product sales revenue by product name? Make a donut chart. Use suggested price for the sales revenue and a unit quantity of 1 for all transactions."})
+
 # * SQL Agent
 
 db = SQLDatabase.from_uri(PATH_DB)
@@ -146,16 +148,18 @@ sql_generator = (
     create_sql_query_chain(
         llm = llm,
         db = db,
-        k = int(1e7),
+        k = int(1e8),
         prompt = prompt_sqlite
     ) 
     | SQLOutputParser() # NEW SQLCodeExtactor
 )
 
 
-# result = sql_generator.invoke({'question': "which 5 customers have the highest p1 probability of purchase?"})
+result = sql_generator.invoke({'question': "which 5 customers have the highest p1 probability of purchase?"})
 
-# pprint(result)
+pprint(result)
+
+Markdown("```sql\n" + result + "\n```")
 
 
 # * Chart Instructor Agent
@@ -199,9 +203,11 @@ chart_instructor = prompt_chart_instructions | llm | StrOutputParser()
 
 chart_instructor
 
-# chart_instruction = chart_instructor.invoke({"question": "Extract customer A and B sales. Create a bar chart", "data": "{Category = [A,B], Value = [1,2]}"})
+chart_instruction = chart_instructor.invoke({"question": "Extract customer A and B sales. Create a bar chart", "data": "{Category = [A,B], Value = [1,2]}"})
 
-# pprint(chart_instruction)
+pprint(chart_instruction)
+
+Markdown(chart_instruction)
 
 
 # * Chart Generator Agent
@@ -276,20 +282,20 @@ chart_generator = prompt_chart_generator.partial(tool_names=", ".join([tool.name
 
 # Converting the Dictionary Response to a plotly figure
 
-# response = chart_generator.invoke({"chart_instructions": chart_instruction, "data": "{Category = [A,B], Value = [1,2]}"})
+response = chart_generator.invoke({"chart_instructions": chart_instruction, "data": "{Category = [A,B], Value = [1,2]}"})
 
-# code = dict(response)['tool_calls'][0]['args']['code']
-# code = dict(response)['invalid_tool_calls'][0]['args']
+code = dict(response)['tool_calls'][0]['args']['code']
+code = dict(response)['invalid_tool_calls'][0]['args']
 
-# pprint(code)
+pprint(code)
 
-# result = repl.run(code)
+result = repl.run(code)
 
-# result_dict = ast.literal_eval(result)
+result_dict = ast.literal_eval(result)
 
-# fig = pio.from_json(json.dumps(result_dict))
+fig = pio.from_json(json.dumps(result_dict))
 
-# fig
+fig
 
 
 
@@ -452,6 +458,8 @@ workflow.add_edge("state_printer", END)
 
 app = workflow.compile()
 
+app
+
 Image(app.get_graph().draw_mermaid_png())
 
 
@@ -470,6 +478,7 @@ What are the top 5 product sales revenue by product name? Make a donut chart. Us
 inputs = {"user_question": QUESTION}
 for s in app.stream(inputs):
     print(s)
+    
 
 # NEW: HOW TO USE THIS INSIDE A STREAMLIT APP
 

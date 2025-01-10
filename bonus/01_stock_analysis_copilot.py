@@ -33,7 +33,7 @@ import yfinance
 from typing import Annotated, Sequence, TypedDict
 
 from pprint import pprint
-from IPython.display import Image
+from IPython.display import Image, Markdown
 
 
 # * LLM SELECTION
@@ -117,9 +117,11 @@ supervisor_chain = (
 
 supervisor_chain
 
-# QUESTION = "What is the last 5 years of daily history for SPY?"
-# result = supervisor_chain.invoke({"messages": [HumanMessage(content=QUESTION)]})
-# result
+QUESTION = "What is the last 5 years of daily history for SPY?"
+result = supervisor_chain.invoke({"messages": [HumanMessage(content=QUESTION)]})
+result
+
+Markdown(result.get("output"))
 
 # * SUBAGENTS
 
@@ -168,18 +170,19 @@ coder_agent = create_agent_with_tools(
 
 coder_agent
 
-QUESTION = "What is the last 5 years of daily history for SPY. Feel free to use yfinance library. Plot price by date using ploly? Make sure to use end date: 2024-07-25."
+QUESTION = "What is the last 5 years of daily history for SPY. Feel free to use yfinance library. Plot price by date using ploly? Make sure to use end date: 2024 January 10."
 result = coder_agent.invoke({"messages": [HumanMessage(content=QUESTION)]})
 result
 
 pprint(result)
+
+Markdown(result['output'])
 
 # * LANGGRAPH
 
 #   - NEW Skill: Annotated Sequences
 class GraphState(TypedDict):
     messages: Annotated[Sequence[BaseMessage], operator.add]
-    num_steps: Annotated[Sequence[int], operator.add]
     next: str
     
     
@@ -189,7 +192,7 @@ def supervisor_node(state):
     
     print(result)
     
-    return {'next': result['next'], 'num_steps': 1}
+    return {'next': result['next']}
 
 def research_node(state):
     
@@ -197,7 +200,6 @@ def research_node(state):
     
     return {
         "messages": [AIMessage(content=result["output"], name="Researcher")],
-        'num_steps': 1
     }
 
 def coder_node(state):
@@ -206,7 +208,6 @@ def coder_node(state):
     
     return {
         "messages": [AIMessage(content=result["output"], name="Coder")],
-        'num_steps': 1
     }
 
 

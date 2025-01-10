@@ -5,8 +5,7 @@
 
 # CHALLENGE 4: CREATE AN APPLICATION THAT HELPS USERS ANALYZE STOCKS USING THE 01_stock_analysis_supervisor_agent
 
-# DIFFICULTY: INTERMEDIATE
+# DIFFICULTY: ADVANCED
 
 # SPECIFIC ACTIONS:
-#  1. Analysis should have chat memory 
-#  2. Suggest any improvements
+#  1. Should produce plots on demand
