@@ -23,6 +23,8 @@ from langgraph.graph import StateGraph, END
 from langchain_community.tools.tavily_search import TavilySearchResults
 from langchain_experimental.tools import PythonREPLTool
 
+from langchain.tools import tool
+
 import operator
 import functools
 import os
@@ -52,6 +54,55 @@ os.environ["TAVILY_API_KEY"] = yaml.safe_load(open("../credentials.yml"))['tavil
 tavily_tool = TavilySearchResults(max_results=5)
 
 python_repl_tool = PythonREPLTool()
+
+@tool
+def multiply(a, b):
+    """
+    This tool multiplies two numbers.
+    
+    Args:
+        a (int): The first number.
+        b (int): The second number.
+    
+    Returns:
+        a * b (int): The product of the two numbers.
+    """
+    return a * b
+
+multiply
+
+llm = ChatOpenAI(model=MODEL)
+
+functions = [
+    {
+        "name": "multiply",
+        "description": "Multiplies two numbers.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "a": {
+                    "type": "integer",
+                    "description": "The first number."
+                },
+                "b": {
+                    "type": "integer",
+                    "description": "The second number."
+                }
+            },
+            "required": ["a", "b"]
+        }
+    }
+]
+
+multiplication_agent = llm.bind(tools=[multiply], functions=functions)
+
+response = multiplication_agent.invoke("What is 5 times 5?")
+
+
+
+
+
+
 
 # * Create Agent Supervisor
 #   - Supervisor has 1 role: Pick which team member to send to (or if finished)
@@ -118,10 +169,14 @@ supervisor_chain = (
 supervisor_chain
 
 QUESTION = "What is the last 5 years of daily history for SPY?"
-result = supervisor_chain.invoke({"messages": [HumanMessage(content=QUESTION)]})
+result = supervisor_chain.invoke(
+    {"messages": [HumanMessage(content=QUESTION)]}
+)
 result
 
-Markdown(result.get("output"))
+result.get("next")
+
+
 
 # * SUBAGENTS
 
@@ -160,6 +215,8 @@ result
 
 pprint(result)
 
+Markdown(result['output'])
+
 # * Coder Agent
 
 coder_agent = create_agent_with_tools(
@@ -177,6 +234,23 @@ result
 pprint(result)
 
 Markdown(result['output'])
+
+
+# * Mupltiplication Tool
+multiplication_agent = create_agent_with_tools(
+    llm,
+    [multiply],
+    "You are a calculator. You can multiply two numbers."
+)
+
+multiplication_agent
+
+QUESTION = "What is 5 times 5?"
+result = multiplication_agent.invoke({"messages": [HumanMessage(content=QUESTION)]})
+
+pprint(result)
+
+
 
 # * LANGGRAPH
 
@@ -198,9 +272,12 @@ def research_node(state):
     
     result = researcher_agent.invoke(state)
     
+    print(result)
+    
     return {
         "messages": [AIMessage(content=result["output"], name="Researcher")],
     }
+    
 
 def coder_node(state):
     
@@ -222,15 +299,22 @@ workflow.add_node("supervisor", supervisor_node)
 for member in subagent_names:
     workflow.add_edge(member, "supervisor")
     
-conditional_map = {'Researcher': 'Researcher', 'Coder': 'Coder', 'FINISH': END}
 
-workflow.add_conditional_edges("supervisor", lambda x: x["next"], conditional_map)
+workflow.add_conditional_edges(
+    "supervisor", 
+    lambda state: state["next"], 
+    {
+        'Researcher': 'Researcher', 
+        'Coder': 'Coder', 
+        'FINISH': END
+    }
+)
 
 workflow.set_entry_point("supervisor")
 
 app = workflow.compile()
 
-Image(app.get_graph().draw_mermaid_png())
+app
 
 
 
@@ -239,6 +323,7 @@ Image(app.get_graph().draw_mermaid_png())
       
 result_3 = app.invoke(
     input = {"messages": [HumanMessage(content="Find the historical prices of SPY for the last 5 years from Yahoo Finance (feel free to use the yfinance library, which is installed). Plot a daily line chart of the SPY value over time from the historical prices using python and the plotly library. Add a 50-day and 200-day simple moving average. Make sure the end date used is '2024-07-24'. Add a dateslider.")]},
+    
     config = {"recursion_limit": 10},
 )
 
@@ -265,3 +350,36 @@ for message in result_4['messages']:
     print(f"Content: {message.content}")
     print("---")
     print()
+
+
+
+import yfinance as yf
+import pandas as pd
+import plotly.graph_objects as go
+
+# Define the ticker symbol and the date range
+ticker_symbol = 'SPY'
+end_date = '2024-01-10'
+start_date = '2019-01-10'
+
+# Get the stock data
+spy_data = yf.download(ticker_symbol, start=start_date, end=end_date)
+
+# Prepare the data for plotting
+spy_data.reset_index(inplace=True)
+
+# Create the plot
+fig = go.Figure()
+
+# Add price line
+fig.add_trace(go.Scatter(x=spy_data['Date'], y=spy_data['Close'], mode='lines', name='Close Price'))
+
+# Update layout
+fig.update_layout(title='SPY Daily Closing Prices (Last 5 Years)',
+                  xaxis_title='Date',
+                  yaxis_title='Price (USD)',
+                  xaxis_rangeslider_visible=True)
+
+# Show the plot
+fig.show()
+

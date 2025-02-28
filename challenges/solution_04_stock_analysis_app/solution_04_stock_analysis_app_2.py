@@ -1,6 +1,7 @@
 # What is a moving average in stock analysis?
 # Make a 5-year chart of SPY. End on August 1, 2024. Add a 50-day and 200-day moving average.
 # Make a 5-year chart of NVDA. End on August 1, 2024. Add Bollingerbands with a 20 day moving average
+
 # * LIBRARIES
 from langchain.agents import AgentExecutor, create_openai_tools_agent
 from langchain_core.messages import BaseMessage, HumanMessage, AIMessage

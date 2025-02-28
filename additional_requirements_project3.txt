@@ -1,2 +1,2 @@
-langgraph==0.0.48
+langgraph
 yfinance
