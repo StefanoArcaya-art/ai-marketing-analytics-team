@@ -14,7 +14,7 @@ In this project, students learn how to implement important AI concepts including
 
 ## Development Environment For The AI Bootcamp
 
-I'll provide the requirements file for the AI Bootcamp. 
+I'll provide the actual versions of software that I am running in my environment. This is important because the software is constantly changing and you may run into issues if you are using a different version of the software.
 
 ``` bash
 conda env export --no-builds > environment_ds4b_301p_dev_matt.yml
