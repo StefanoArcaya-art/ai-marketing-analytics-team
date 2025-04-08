@@ -17,5 +17,5 @@ In this project, students learn how to implement important AI concepts including
 I'll provide the requirements file for the AI Bootcamp. 
 
 ``` bash
-conda env export --no-builds > environment_ds4b_301p_dev.yml
+conda env export --no-builds > environment_ds4b_301p_dev_matt.yml
 ```
