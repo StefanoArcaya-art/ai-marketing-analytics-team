@@ -1,31 +1,25 @@
 # *** BUSINESS INTELLIGENCE EXPERT (CLINIC #2) ***
 
 
-from langchain_core.output_parsers import StrOutputParser, JsonOutputParser, BaseOutputParser
+from langchain_core.output_parsers import StrOutputParser, JsonOutputParser
 from langchain.prompts import PromptTemplate
 
 from langchain_community.utilities import SQLDatabase
 from langchain.chains import create_sql_query_chain
 
-from langchain_core.tools import tool
-from langchain_experimental.utilities import PythonREPL
-
 from langgraph.graph import StateGraph, END
 
 from langchain_openai import ChatOpenAI
 
-from typing import Annotated, TypedDict
-
+from typing import TypedDict
 
 import pandas as pd
 import sqlalchemy as sql
 import plotly.io as pio
 
-import ast
-import json
-import re
-
 from pprint import pprint
+
+from customer_analytics_team.agents.utils import SQLOutputParser, PythonOutputParser
 
 
 def make_business_intelligence_agent(model, db_path):    
@@ -42,7 +36,8 @@ def make_business_intelligence_agent(model, db_path):
     llm.temperature = 0
     
     # * Routing Preprocessor Agent
-
+    #   * NEW: CONTEXT "chat_history" added to the prompt
+    
     routing_preprocessor_prompt = PromptTemplate(
         template="""
         You are an expert in routing decisions for a SQL database agent, a Charting Visualization Agent, and a Pandas Table Agent. Your job is to:
@@ -52,13 +47,14 @@ def make_business_intelligence_agent(model, db_path):
         
         Use the following criteria on how to route the the initial user question:
         
-        From the incoming user question and the chat_history, remove any details about the format of the final response as either a Chart or Table and return only the important part of the incoming user question that is relevant for the SQL generator agent. This will be the 'formatted_user_question_sql_only'. If 'None' is found, return the original user question.
+        From the incoming user question, remove any details about the format of the final response as either a Chart or Table and return only the important part of the incoming user question that is relevant for the SQL generator agent. This will be the 'formatted_user_question_sql_only'. If 'None' is found, return the original user question.
         
         Next, determine if the user would like a data visualization ('chart') or a 'table' returned with the results of the SQL query. If unknown, not specified or 'None' is found, then select 'table'.  
         
         Return JSON with 'formatted_user_question_sql_only' and 'routing_preprocessor_decision'.
         
         INITIAL_USER_QUESTION: {initial_question}
+        
         CONTEXT: {chat_history}
         """,
         input_variables=["initial_question", "chat_history"]
@@ -66,31 +62,14 @@ def make_business_intelligence_agent(model, db_path):
 
     routing_preprocessor = routing_preprocessor_prompt | llm | JsonOutputParser()
 
+    routing_preprocessor
+
+
     # * SQL Agent
 
     db = SQLDatabase.from_uri(PATH_DB)
 
-    def extract_sql_code(text):
-        sql_code_match = re.search(r'```sql(.*?)```', text, re.DOTALL)
-        if sql_code_match:
-            sql_code = sql_code_match.group(1).strip()
-            return sql_code
-        else:
-            sql_code_match = re.search(r"sql(.*?)'", text, re.DOTALL)
-            if sql_code_match:
-                sql_code = sql_code_match.group(1).strip()
-                return sql_code
-            else:
-                return None
-        
-    class SQLOutputParser(BaseOutputParser):
-        def parse(self, text: str):
-            sql_code = extract_sql_code(text)
-            if sql_code is not None:
-                return sql_code
-            else:
-                # Assume ```sql wasn't used
-                return text
+    # * New: SQL Output Parser
 
     prompt_sqlite = PromptTemplate(
         input_variables=['input', 'table_info', 'top_k'],
@@ -103,7 +82,7 @@ def make_business_intelligence_agent(model, db_path):
         
         Only return a single query if possible.
         
-        Never query for all columns from a table unless the user specifies it. You must query only the columns that are needed to answer the question unless the user specifies it. Wrap each column name in double quotes (") to denote them as delimited identifiers.
+        Never query for all columns from a table. You must query only the columns that are needed to answer the question. Wrap each column name in double quotes (") to denote them as delimited identifiers.
         
         Pay attention to use only the column names you can see in the tables below. Be careful to not query for columns that do not exist. Also, pay attention to which column is in which table.
         
@@ -126,14 +105,10 @@ def make_business_intelligence_agent(model, db_path):
         | SQLOutputParser() # NEW SQLCodeExtactor
     )
 
-    # * Dataframe Conversion
-        
-    sql_engine = sql.create_engine(PATH_DB)
 
-    conn = sql_engine.connect()
+    # * Chart Instructor Agent
 
-    # * Chart Instructor
-
+    # * NEW: Creates new instructions specifically for the Chart Generator Agent from the User Question
     prompt_chart_instructions = PromptTemplate(
         template="""
         You are a supervisor that is an expert in providing instructions to a chart generator agent for plotting. 
@@ -148,6 +123,17 @@ def make_business_intelligence_agent(model, db_path):
         
         Come up with an informative title from the user's question and data provided. Also provide X and Y axis titles.
         
+        Instruct the chart generator to use the following theme colors, sizes, etc:
+        
+        - Use this color for bars and lines:
+            'blue': '#3381ff',
+        - Base Font Size: 8.8 (Used for x and y axes tickfont, any annotations, hovertips)
+        - Title Font Size: 13.2
+        - Line Size: 0.65 (specify these within the xaxis and yaxis dictionaries)
+        - Add smoothers or trendlines to scatter plots unless not desired by the user
+        - Do not use color_discrete_map (this will result in an error)
+        - Hover tip size: 8.8
+        
         Return your instructions in the following format:
         CHART GENERATOR INSTRUCTIONS: FILL IN THE INSTRUCTIONS HERE
         
@@ -158,57 +144,38 @@ def make_business_intelligence_agent(model, db_path):
     chart_instructor = prompt_chart_instructions | llm | StrOutputParser()
 
 
-    # * Chart Generator
-
-    repl = PythonREPL()
-
-    @tool
-    def python_repl(
-        code: Annotated[str, "The python code to execute to generate your chart."]
-    ):
-        """Use this to execute python code. If you want to see the output of a value,
-        you should print it out with `print(...)`. This is visible to the user."""
-        try:
-            result = repl.run(code)
-        except BaseException as e:
-            return f"Failed to execute. Error: {repr(e)}"
-        return f"Successfully executed:\n```python\n{code}\n```\nStdout: {result}"
-
+    # * Chart Generator Agent
 
     prompt_chart_generator = PromptTemplate(
         template = """
-        You are an expert in creating data visualizations and plots using the plotly python library. You must use plotly or plotly.express to produce plots.
+        You are an expert in creating data visualizations and plots using the plotly python library. You must use plotly or plotly.express to produce plots. Your job is to produce python code to generate visualizations.
         
-        Your job is to produce python code to generate visualizations.
+        # IMPORTANT NOTES:
         
-        Create the python code to produce the requested visualization given the plot requested from the original user question and the input data. 
+        1. Return a single function named, "plot_chart" that ingests a parameter containing "data", and outputs the plotly fig.
+        2. Return Python code in ```python ``` format.
+        3. Important: Keep the scope of the plot_chart() function local (imports and helper functions inside the main function). This makes it easier to use this function with exec()
         
-        The input data will be provided as a dictionary and will need converted to a pandas data frame before creating the visualization. 
+        CHART INSTRUCTIONS: 
+        {chart_instructions}
         
-        The output of the plotly chart should be stored as a JSON object with pio.to_json() and then to a dictionary. 
+        INPUT DATA: 
+        {data}
         
-        Make sure to add: import plotly.io as pio
-        Make sure to print the fig_dict
-        Make sure to import json
+        EXAMPLE FUNCTION CODE TO RETURN (USE THIS FORMAT):
         
-        Here's an example of converting a plotly object to JSON:
+        ```python
+        def plot_chart(data):
         
-        import json
-        import plotly.graph_objects as go
-        import plotly.io as pio
-
-        # Create a sample Plotly figure
-        fig = go.Figure(data=go.Bar(y=[2, 3, 1]))
-
-        # Convert the figure to JSON
-        fig_json = pio.to_json(fig)
-        fig_dict = json.loads(fig_json)
-        
-        print(fig_dict) # MAKE SURE TO DO THIS
-        
-        
-        CHART INSTRUCTIONS: {chart_instructions}
-        INPUT DATA: {data}
+            # Import Libraries inside function
+            import pandas as pd
+            import plotly.express as px
+            
+            # Create Plot
+            fig = px.bar(data, x='Category', y='Value')
+            
+            return fig
+        ```
         
         Important Notes on creating the chart code:
         - Do not use color_discrete_map. This is an invalid property.
@@ -222,11 +189,9 @@ def make_business_intelligence_agent(model, db_path):
         input_variables=["chart_instructions", "data"]
     )
 
-    tools = [python_repl]
-
-    chart_generator = prompt_chart_generator.partial(tool_names=", ".join([tool.name for tool in tools])) | llm.bind_tools(tools)
+    chart_generator = prompt_chart_generator | llm | PythonOutputParser()
     
-    # * Summarizer
+    # * NEW: Summarizer
     
     summarizer_prompt = PromptTemplate(
         template="""
@@ -254,14 +219,13 @@ def make_business_intelligence_agent(model, db_path):
 
     summarizer = summarizer_prompt | llm | StrOutputParser()
 
-
     # * LANGGRAPH
     class GraphState(TypedDict):
         """
         Represents the state of our graph.
         """
         user_question: str
-        chat_history: list
+        chat_history: list # NEW - list that holds the chat history
         formatted_user_question_sql_only: str
         sql_query : str
         data: dict
@@ -270,12 +234,13 @@ def make_business_intelligence_agent(model, db_path):
         chart_plotly_code: str
         chart_plotly_json: dict
         chart_plotly_error: bool
-        summary: str
+        summary: str # NEW - summary of the analysis results
         
     def preprocess_routing(state):
         print("---ROUTER---")
-        question = state.get("user_question")
         
+        # Get the user question and chat history
+        question = state.get("user_question")
         chat_history = state.get("chat_history")
         
         # Chart Routing and SQL Prep
@@ -289,7 +254,7 @@ def make_business_intelligence_agent(model, db_path):
             "formatted_user_question_sql_only": formatted_user_question_sql_only,
             "routing_preprocessor_decision": routing_preprocessor_decision,
         }
-
+        
     def generate_sql(state):
         print("---GENERATE SQL---")
         question = state.get("formatted_user_question_sql_only")
@@ -309,10 +274,12 @@ def make_business_intelligence_agent(model, db_path):
 
         sql_query = state.get("sql_query")
         
-        # Remove trailing ' that gpt-3.5-turbo sometimes leaves
-        sql_query = sql_query.rstrip("'")
-        
-        df = pd.read_sql(sql_query, conn)
+        # Generate Data Frame
+        sql_engine = sql.create_engine(PATH_DB)
+        conn = sql_engine.connect()
+        sql_query_2 = sql_query.rstrip("'")
+        df = pd.read_sql(sql_query_2, conn)
+        conn.close()
         
         return {"data": dict(df)}
 
@@ -324,9 +291,14 @@ def make_business_intelligence_agent(model, db_path):
     def instruct_chart_generator(state):
         print("---INSTRUCT CHART GENERATOR---")
         
+        # Get the user question and data
         question = state.get("user_question")
-        
         data = state.get("data")
+        
+        # if data is large, sample
+        df = pd.DataFrame(data)
+        if df.shape[0] > 1000:
+            data = df.sample(1000).to_dict()
         
         chart_generator_instructions = chart_instructor.invoke({"question": question, "data": data})
         
@@ -336,37 +308,46 @@ def make_business_intelligence_agent(model, db_path):
     def generate_chart(state):
         print("---GENERATE CHART---")
         
+        # Get the chart generator instructions and data
         chart_instructions = state.get("chart_generator_instructions")
-        
         data = state.get("data")
         
+        # if data is large, sample
+        df = pd.DataFrame(data)
+        if df.shape[0] > 1000:
+            data = df.sample(1000).to_dict()
+        
+        # Generate Chart Python Code
         response = chart_generator.invoke({"chart_instructions": chart_instructions, "data": data})
         
-        # Fix - if invalid tool calls
-        try:
-            code = dict(response)['tool_calls'][0]['args']['code']
-        except: 
-            code = dict(response)['invalid_tool_calls'][0]['args']
-        
-        result = repl.run(code)
-        
+        # Execute the chart code and get the JSON
         chart_plotly_error = False
-        if "error" in result[:40].lower():
+        fig_json = None
+        if "error" in response[:40].lower():
             chart_plotly_error = True
         else:
             try:
-                result_dict = ast.literal_eval(result)
-            
-                fig = pio.from_json(json.dumps(result_dict))
+                # Create dictionaries to hold the local and global variables
+                local_vars = {}
+                global_vars = {}
+                
+                exec(response, global_vars, local_vars)
+                
+                plot_chart = local_vars.get("plot_chart")
+
+                fig = plot_chart(df)
+                
+                fig_json = pio.to_json(fig)
             except:
                 chart_plotly_error = True
             
         return {
-            "chart_plotly_code": code, 
-            "chart_plotly_json": result, 
+            "chart_plotly_code": response, 
+            "chart_plotly_json": fig_json, 
             "chart_plotly_error": chart_plotly_error,
         }
-        
+    
+    # * NEW: Summarizer Node
     def summarize_results(state):
         print("---SUMMARIZE RESULTS----")
         
@@ -387,7 +368,6 @@ def make_business_intelligence_agent(model, db_path):
         if state['routing_preprocessor_decision'] == "chart":
             print(f"Chart Code: \n{pprint(state['chart_plotly_code'])}")
             print(f"Chart Error: {state['chart_plotly_error']}")
-        
         
 
     # * WORKFLOW DAG
@@ -422,5 +402,5 @@ def make_business_intelligence_agent(model, db_path):
     workflow.add_edge("state_printer", END)
 
     app = workflow.compile()
-    
+
     return app
