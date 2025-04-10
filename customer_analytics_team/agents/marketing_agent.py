@@ -1,3 +1,11 @@
+# *** MARKETING COPY-WRITER / EMAIL EXPERT (BASED ON PROMPT ENGINEERING FROM AI FAST TRACK) ***
+
+# Key Modifications:
+# 1. Implements Prompt Template and prompt engineering to create a marketing email copywriter persona.
+# 2. Integrates "chat_history" to provide context for the agent based on the previous sequence of messages.
+# 3. Returns a Compiled LangGraph app
+
+# LIBRARIES
 
 from langchain_openai import ChatOpenAI
 from langchain.prompts import PromptTemplate
@@ -10,7 +18,9 @@ from typing import Sequence, TypedDict
 
 from customer_analytics_team.agents.utils import get_last_human_message
 
-def make_marketing_email_agent(model, temperature=0):
+# AGENT
+
+def make_marketing_agent(model, temperature=0):
     
     # Handle case when users want to make a different model than ChatOpenAI
     if isinstance(model, str):

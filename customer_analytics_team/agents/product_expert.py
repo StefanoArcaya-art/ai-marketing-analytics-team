@@ -1,3 +1,10 @@
+# *** PRODUCT EXPERT (BASED ON RAG AGENT FROM CLINIC #1) ***
+
+# Key Modifications:
+# 1. Integrates a Vector Database (Chroma) to retrieve product information.
+# 2. Implements "chat_history" to provide context for the agent based on a sequence of messages.
+# 2. Returns a Compiled LangGraph app
+
 # LIBRARIES
 
 from langchain_chroma import Chroma

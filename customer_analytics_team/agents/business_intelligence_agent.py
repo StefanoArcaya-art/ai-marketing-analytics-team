@@ -1,5 +1,8 @@
 # *** BUSINESS INTELLIGENCE EXPERT (CLINIC #2) ***
 
+# Key Modifications:
+# 1. Routing Preprocessor Agent: Now gets chat_history
+# 2. Summarizer: Added to summarize the analysis results, summary gets returned to the Supervisor Agent
 
 from langchain_core.output_parsers import StrOutputParser, JsonOutputParser
 from langchain.prompts import PromptTemplate
@@ -21,6 +24,7 @@ from pprint import pprint
 
 from customer_analytics_team.agents.utils import SQLOutputParser, PythonOutputParser
 
+# KEY INPUTS
 
 def make_business_intelligence_agent(model, db_path):    
     
@@ -69,7 +73,7 @@ def make_business_intelligence_agent(model, db_path):
 
     db = SQLDatabase.from_uri(PATH_DB)
 
-    # * New: SQL Output Parser
+    # SQL Output Parser
 
     prompt_sqlite = PromptTemplate(
         input_variables=['input', 'table_info', 'top_k'],
@@ -108,7 +112,6 @@ def make_business_intelligence_agent(model, db_path):
 
     # * Chart Instructor Agent
 
-    # * NEW: Creates new instructions specifically for the Chart Generator Agent from the User Question
     prompt_chart_instructions = PromptTemplate(
         template="""
         You are a supervisor that is an expert in providing instructions to a chart generator agent for plotting. 
@@ -268,7 +271,6 @@ def make_business_intelligence_agent(model, db_path):
         
         return {"sql_query": sql_query}
 
-
     def convert_dataframe(state):
         print("---CONVERT DATA FRAME---")
 
@@ -282,7 +284,6 @@ def make_business_intelligence_agent(model, db_path):
         conn.close()
         
         return {"data": dict(df)}
-
 
     def decide_chart_or_table(state):
         print("---DECIDE CHART OR TABLE---")
@@ -303,7 +304,6 @@ def make_business_intelligence_agent(model, db_path):
         chart_generator_instructions = chart_instructor.invoke({"question": question, "data": data})
         
         return {"chart_generator_instructions": chart_generator_instructions}
-
 
     def generate_chart(state):
         print("---GENERATE CHART---")
@@ -355,7 +355,6 @@ def make_business_intelligence_agent(model, db_path):
         
         return {"summary": result}
         
-        
     def state_printer(state):
         """print the state"""
         print("---STATE PRINTER---")
@@ -379,7 +378,7 @@ def make_business_intelligence_agent(model, db_path):
     workflow.add_node("convert_dataframe", convert_dataframe)
     workflow.add_node("instruct_chart_generator", instruct_chart_generator)
     workflow.add_node("generate_chart", generate_chart)
-    workflow.add_node("summarizer", summarize_results)
+    workflow.add_node("summarizer", summarize_results) # New Summarizer Node
     workflow.add_node("state_printer", state_printer)
 
     workflow.set_entry_point("preprocess_routing")
@@ -398,7 +397,7 @@ def make_business_intelligence_agent(model, db_path):
 
     workflow.add_edge("instruct_chart_generator", "generate_chart")
     workflow.add_edge("generate_chart", "summarizer")
-    workflow.add_edge("summarizer", "state_printer")
+    workflow.add_edge("summarizer", "state_printer") # Add step to summarize the analysis
     workflow.add_edge("state_printer", END)
 
     app = workflow.compile()
