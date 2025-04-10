@@ -10,8 +10,6 @@
 
 # * LIBRARIES
 
-
-
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.output_parsers.openai_functions import JsonOutputFunctionsParser
 from langchain_core.messages import BaseMessage, HumanMessage, AIMessage

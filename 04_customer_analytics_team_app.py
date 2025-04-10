@@ -243,17 +243,6 @@ def create_rag_agent(db_path, llm, temperature = 0):
     
     question_answer_chain = create_stuff_documents_chain(llm, qa_prompt)
     
-
-    prompt = ChatPromptTemplate.from_template(
-        """Answer the question based only on the following context:
-        {context}
-
-        Question: {question}
-        
-        Do not use markdown headers in your response.
-        """
-    )
-    
     rag_chain = create_retrieval_chain(history_aware_retriever, question_answer_chain)
     
     return rag_chain
@@ -663,7 +652,7 @@ def create_marketing_agent(llm, temperature = 1.0):
     
     llm.temperature = temperature
     
-    # * Routing Preprocessor Agent
+    # * Marketing Agent
 
     marketing_agent_prompt = PromptTemplate(
         template="""
