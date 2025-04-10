@@ -33,7 +33,7 @@ PATH_PRODUCTS_VECTORDB = "data/data-rag-product-information/products_clean.db"
 
 
 # * AGENT CREATION
-def make_product_expert_agent(model, db_path=PATH_PRODUCTS_VECTORDB):
+def make_product_expert_agent(model, model_embedding='text-embedding-ada-002', db_path=PATH_PRODUCTS_VECTORDB):
     """
     Create a Product Expert Agent that can answer questions about products.
     
@@ -50,7 +50,15 @@ def make_product_expert_agent(model, db_path=PATH_PRODUCTS_VECTORDB):
     # Handle case when users want to make a different model than ChatOpenAI
     if isinstance(model, str):
         model = ChatOpenAI(model = model)
-
+        
+    if isinstance(model_embedding, str):
+        embedding_function = OpenAIEmbeddings(
+            model=model_embedding,
+        )
+    else:
+        embedding_function = model_embedding
+    
+    
     # * CREATE AGENT COMPONENTS
     
     # Preprocessor Agent
@@ -81,10 +89,6 @@ def make_product_expert_agent(model, db_path=PATH_PRODUCTS_VECTORDB):
     
     # RAG Agent
     def create_rag_agent(db_path, llm, temperature):
-        
-        embedding_function = OpenAIEmbeddings(
-            model='text-embedding-ada-002',
-        )
         
         llm.temperature = temperature
         

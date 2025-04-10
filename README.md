@@ -2,7 +2,7 @@
 
 ## Project 3: Multi-Agent Supervision + Customer Analytics Team 
 
-![Course Project 3 Diagram](/img/ai-bootcamp-project-02.jpg)
+![Course Project 3 Diagram](/img/ai-bootcamp-project-03.jpg)
 
 In this project, students learn how to implement important AI concepts including:
 
