@@ -10,25 +10,15 @@
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
 # Rag Agents
+from langchain_chroma import Chroma
 from langchain.document_loaders import WebBaseLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, PromptTemplate
-from langchain_core.messages import BaseMessage, AIMessage, HumanMessage
-from langchain_chroma import Chroma
-from langchain.chains import create_retrieval_chain
-from langchain.chains.combine_documents import create_stuff_documents_chain
-from langchain.chains import create_history_aware_retriever
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.messages import HumanMessage
 
-# LangGraph
-from langgraph.graph import StateGraph, START, END
-
-from typing import Sequence, TypedDict
-
-# Custom Helper Function
-from customer_analytics_team.agents.utils import get_last_human_message
-
+# Other Libraries
 import pandas as pd
 import joblib
 import re
@@ -263,7 +253,11 @@ Markdown(result)
 
 
 # * STEP 2: MAKE THE AGENT
+#  - Create a RAG Agent based on the one used in Clinic #1
+#  - Modularize the agent for easier re-use in production
+#  - Use LangGraph to manage State
 
+# Libraries 
 from customer_analytics_team.agents.product_expert import make_product_expert_agent
 
 # Make the agent
