@@ -6,6 +6,7 @@
 
 from langchain_core.output_parsers import StrOutputParser, JsonOutputParser
 from langchain.prompts import PromptTemplate
+from langchain_core.messages import BaseMessage, AIMessage
 
 from langchain_community.utilities import SQLDatabase
 from langchain.chains import create_sql_query_chain
@@ -22,6 +23,9 @@ import plotly.io as pio
 
 from pprint import pprint
 
+from typing import Sequence, TypedDict
+
+from customer_analytics_team.agents.utils import get_last_human_message
 from customer_analytics_team.agents.utils import SQLOutputParser, PythonOutputParser
 
 # KEY INPUTS
@@ -227,8 +231,8 @@ def make_business_intelligence_agent(model, db_path):
         """
         Represents the state of our graph.
         """
+        messages: Sequence[BaseMessage] # NEW - list that holds the chat history
         user_question: str
-        chat_history: list # NEW - list that holds the chat history
         formatted_user_question_sql_only: str
         sql_query : str
         data: dict
@@ -243,17 +247,21 @@ def make_business_intelligence_agent(model, db_path):
         print("---ROUTER---")
         
         # Get the user question and chat history
-        question = state.get("user_question")
-        chat_history = state.get("chat_history")
+        messages = state.get("messages")
+        
+        last_human_question = get_last_human_message(messages)
+        if last_human_question:
+            last_human_question = last_human_question.content
         
         # Chart Routing and SQL Prep
-        response = routing_preprocessor.invoke({"initial_question": question, "chat_history": chat_history})
+        response = routing_preprocessor.invoke({"initial_question": last_human_question, "chat_history": messages})
         
         formatted_user_question_sql_only = response['formatted_user_question_sql_only']
         
         routing_preprocessor_decision = response['routing_preprocessor_decision']
         
         return {
+            "user_question": last_human_question,
             "formatted_user_question_sql_only": formatted_user_question_sql_only,
             "routing_preprocessor_decision": routing_preprocessor_decision,
         }
@@ -275,6 +283,10 @@ def make_business_intelligence_agent(model, db_path):
         print("---CONVERT DATA FRAME---")
 
         sql_query = state.get("sql_query")
+        
+        pprint(state)
+        
+        pprint(sql_query)
         
         # Generate Data Frame
         sql_engine = sql.create_engine(PATH_DB)
@@ -353,7 +365,10 @@ def make_business_intelligence_agent(model, db_path):
         
         result = summarizer.invoke({"results": dict(state)})
         
-        return {"summary": result}
+        return {
+            "summary": result,
+            "messages": [AIMessage(content=result, additional_kwargs=state, name='Business_Intelligence_Expert')],
+        }
         
     def state_printer(state):
         """print the state"""

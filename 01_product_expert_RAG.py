@@ -3,7 +3,7 @@
 # MULTI-AGENTS (AGENTIAL SUPERVISION)
 # ***
 
-# GOAL: Make a product expert AI agent
+# GOAL: Make a product expert AI agent based on the RAG agent from Clinic #1
 
 # LIBRARIES
 
@@ -28,6 +28,9 @@ import yaml
 
 from pprint import pprint
 from IPython.display import Markdown
+
+# Backup to display mermaid graphs
+from IPython.display import display, Image
 
 # Key Inputs
 MODEL = 'gpt-4o-mini'
@@ -249,7 +252,8 @@ result = rag_chain_2.invoke("Is the 4-Course R-Track Open for Enrollment?")
 
 Markdown(result)
 
-# * Conclusion: The Non-Chunked LLM quickly discovered that the 4-course R-Track was closed for enrollment
+# * Conclusion: 
+# - The Non-Chunked LLM quickly discovered that the 4-course R-Track was closed for enrollment
 
 
 # * STEP 2: MAKE THE RAG AGENT
@@ -270,6 +274,8 @@ product_expert_agent = make_product_expert_agent(
 )
 
 product_expert_agent
+
+# display(Image(product_expert_agent.get_graph().draw_png()))
 
 product_expert_agent.get_input_jsonschema()
 
