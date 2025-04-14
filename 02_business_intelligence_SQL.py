@@ -3,7 +3,7 @@
 # MULTI-AGENTS (AGENTIAL SUPERVISION)
 # ***
 
-# GOAL: Make a business intelligence AI agent based on the SQL + Charting Agent from Clinic #12
+# GOAL: Make a business intelligence AI agent based on the SQL + Charting Agent from Clinic #2
 
 # LIBRARIES
 
