@@ -252,10 +252,11 @@ Markdown(result)
 # * Conclusion: The Non-Chunked LLM quickly discovered that the 4-course R-Track was closed for enrollment
 
 
-# * STEP 2: MAKE THE AGENT
+# * STEP 2: MAKE THE RAG AGENT
 #  - Create a RAG Agent based on the one used in Clinic #1
 #  - Modularize the agent for easier re-use in production
 #  - Use LangGraph to manage State
+#  - Implement LangGraph Messages History to track multi-agent conversations
 
 # Libraries 
 from customer_analytics_team.agents.product_expert import make_product_expert_agent
@@ -274,10 +275,23 @@ product_expert_agent.get_input_jsonschema()
 
 
 
-# TEST: WHAT IS LEARNING LABS PRO?
+# * TEST: What is Learning Labs PRO?
 
 messages = [
     HumanMessage("What is Learning Labs PRO?")
+]
+
+result = product_expert_agent.invoke({"messages": messages})
+
+pprint(result['messages'])
+
+Markdown(result['messages'][0].content)
+
+
+# * TEST: How long will it take to complete the 5-Course R-Track?
+
+messages = [
+    HumanMessage("How long will it take to complete the 5-Course R-Track?")
 ]
 
 result = product_expert_agent.invoke({"messages": messages})

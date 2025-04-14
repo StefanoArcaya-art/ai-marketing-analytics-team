@@ -3,7 +3,7 @@
 # Key Modifications:
 # 1. Integrates a Vector Database (Chroma) to retrieve product information.
 # 2. Implements "chat_history" to provide context for the agent based on a sequence of messages.
-# 2. Returns a Compiled LangGraph app
+# 3. Returns a Compiled LangGraph app
 
 # LIBRARIES
 
@@ -130,7 +130,7 @@ def make_product_expert_agent(model, model_embedding='text-embedding-ada-002', d
         
         return rag_chain
 
-    product_expert_agent = create_rag_agent(db_path=db_path, llm=model, temperature=0.7)
+    rag_agent = create_rag_agent(db_path=db_path, llm=model, temperature=0.7)
     
     # * CREATE AGENT LANGGRAPH WORKFLOW
     
@@ -152,7 +152,7 @@ def make_product_expert_agent(model, model_embedding='text-embedding-ada-002', d
         # Implement a preprocessor
         last_question = rag_preprocessor.invoke({'user_question': last_question})
         
-        result = product_expert_agent.invoke({"input": last_question, "chat_history": messages})
+        result = rag_agent.invoke({"input": last_question, "chat_history": messages})
         
         # print(result)
         
