@@ -316,7 +316,7 @@ display(Image(app.get_graph(xray=1).draw_mermaid_png()))
 # display(Image(app.get_graph(xray=1).draw_png()))
 
 
-# TEST: 
+# TEST: Complex request
 
 messages = [HumanMessage(content="Find the top 20 email subscribers ranked by probability of purchase (p1 lead score in the leads_scored table) who have have not purchased any courses yet? Have the Product Expert collect information on the 5-Course R-Track for use with the Marketing Expert. Have the Marketing Expert write a compelling marketing email.")]
 
@@ -332,9 +332,32 @@ result = app.invoke(
 
 list(result.keys())
 
+result["messages"]
+
+for message in result['messages']:
+    if message.name:
+        pprint(message.name)
+    pprint(message.content)
+    
+# Getting State Elements
 pprint(result['sql_query'])
 
 pd.DataFrame(result['data'])
 
-result["messages"]
 
+# TEST: Persistant Short Term Memory
+
+messages = [HumanMessage(content="Make sure to remove Kamryn Tremblay from the email list when you make the email list. Please return the results with Kamryn Tremblay removed.")]
+
+result = app.invoke(
+    input = {"messages": messages},
+    # * NEW: Add thread_id
+    config = {
+        "recursion_limit": 10,
+        "configurable": {"thread_id": "123"}
+    },
+)
+
+result
+
+pprint(result['messages'][-1].content)
