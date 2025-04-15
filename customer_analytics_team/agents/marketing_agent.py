@@ -64,6 +64,7 @@ def make_marketing_agent(model, temperature=0):
     
     class GraphState(TypedDict):
         messages: Sequence[BaseMessage]
+        response: Sequence[BaseMessage]
         
     def marketing_email_writer_node(state):
     
@@ -78,7 +79,7 @@ def make_marketing_agent(model, temperature=0):
         result = marketing_agent.invoke({'initial_question': last_question,'chat_history': messages})
         
         return {
-            "messages": [AIMessage(content=result, name='Marketing_Email_Writer')],
+            "response": [AIMessage(content=result, name='Marketing_Email_Writer')],
         }
     
     workflow = StateGraph(GraphState)

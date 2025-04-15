@@ -1,3 +1,4 @@
 langgraph
 langgraph-supervisor
+langgraph-swarm
 yfinance

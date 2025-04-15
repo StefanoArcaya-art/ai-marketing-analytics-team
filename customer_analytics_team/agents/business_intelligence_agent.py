@@ -40,7 +40,6 @@ def make_business_intelligence_agent(model, db_path):
     
     PATH_DB = db_path
     
-    
     llm.temperature = 0
     
     # * Routing Preprocessor Agent
@@ -232,6 +231,7 @@ def make_business_intelligence_agent(model, db_path):
         Represents the state of our graph.
         """
         messages: Sequence[BaseMessage] # NEW - list that holds the chat history
+        response: Sequence[BaseMessage] # NEW - list that holds the agent's response
         user_question: str
         formatted_user_question_sql_only: str
         sql_query : str
@@ -255,6 +255,8 @@ def make_business_intelligence_agent(model, db_path):
         
         # Chart Routing and SQL Prep
         response = routing_preprocessor.invoke({"initial_question": last_human_question, "chat_history": messages})
+        
+        pprint(response['formatted_user_question_sql_only'])
         
         formatted_user_question_sql_only = response['formatted_user_question_sql_only']
         
@@ -295,7 +297,7 @@ def make_business_intelligence_agent(model, db_path):
         df = pd.read_sql(sql_query_2, conn)
         conn.close()
         
-        return {"data": dict(df)}
+        return {"data": df.to_dict(orient="records")}
 
     def decide_chart_or_table(state):
         print("---DECIDE CHART OR TABLE---")
@@ -367,7 +369,7 @@ def make_business_intelligence_agent(model, db_path):
         
         return {
             "summary": result,
-            "messages": [AIMessage(content=result, additional_kwargs=state, name='Business_Intelligence_Expert')],
+            "response": [AIMessage(content=result, name='Business_Intelligence_Expert')],
         }
         
     def state_printer(state):

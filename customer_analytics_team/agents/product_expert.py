@@ -136,6 +136,7 @@ def make_product_expert_agent(model, model_embedding='text-embedding-ada-002', d
     
     class GraphState(TypedDict):
         messages: Sequence[BaseMessage]
+        response: Sequence[BaseMessage]
         
     def product_expert_node(state):
     
@@ -157,7 +158,7 @@ def make_product_expert_agent(model, model_embedding='text-embedding-ada-002', d
         # print(result)
         
         return {
-            "messages": [AIMessage(content=result['answer'], name='Product_Expert')],
+            "response": [AIMessage(content=result['answer'], name='Product_Expert')],
         }
     
     workflow = StateGraph(GraphState)

@@ -22,7 +22,7 @@ from IPython.display import Markdown
 from IPython.display import display, Image
 
 # Key Inputs
-MODEL = 'gpt-4o-mini'
+MODEL = 'gpt-4.1-nano'
 
 os.environ["OPENAI_API_KEY"] = yaml.safe_load(open('../credentials.yml'))['openai']
 
@@ -46,4 +46,4 @@ result = marketing_agent.invoke({"messages": messages})
 
 result
 
-Markdown(result['messages'][0].content)
+Markdown(result['response'][0].content)

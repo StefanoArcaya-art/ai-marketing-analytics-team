@@ -33,7 +33,7 @@ from IPython.display import Markdown
 from IPython.display import display, Image
 
 # Key Inputs
-MODEL = 'gpt-4o-mini'
+MODEL = 'gpt-4.1-nano'
 EMBEDDING = 'text-embedding-ada-002'
 PATH_VECTORDB = "data/data-rag-product-information/products_clean.db"
 
@@ -201,8 +201,6 @@ vectorstore_2.similarity_search("Is the 4-Course R-Track Open for Enrollment?", 
 
 retriever_2 = vectorstore_2.as_retriever()
 
-
-
 # * Prompt template 
 
 template = """Answer the question based only on the following context:
@@ -284,12 +282,23 @@ product_expert_agent.get_input_jsonschema()
 # * TEST: What is Learning Labs PRO?
 
 messages = [
-    HumanMessage("What is Learning Labs PRO?")
+    HumanMessage("What is Learning Labs PRO? Include a summary of the course, how many labs, and costs.")
 ]
 
 result = product_expert_agent.invoke({"messages": messages})
 
-pprint(result['messages'])
+pprint(result['response'])
+
+Markdown(result['response'][0].content)
+
+
+# * TEST: How long will it take to complete the 5-Course R-Track?
+
+messages = [
+    HumanMessage("Estimate how long will it take to complete the 5-Course R-Track.")
+]
+
+result = product_expert_agent.invoke({"messages": messages})
 
 Markdown(result['messages'][0].content)
 
@@ -297,9 +306,9 @@ Markdown(result['messages'][0].content)
 # * TEST: How long will it take to complete the 5-Course R-Track?
 
 messages = [
-    HumanMessage("How long will it take to complete the 5-Course R-Track?")
+    HumanMessage("Collect information on the 5-Course R Track")
 ]
 
 result = product_expert_agent.invoke({"messages": messages})
 
-Markdown(result['messages'][0].content)
+Markdown(result['response'][0].content)
