@@ -2,7 +2,7 @@
 
 # Key Modifications:
 # 1. Integrates a Vector Database (Chroma) to retrieve product information.
-# 2. Implements "chat_history" to provide context for the agent based on a sequence of messages.
+# 2. Implements Messages History "chat_history" to provide context for the agent based on a sequence of messages.
 # 3. Returns a Compiled LangGraph app
 
 # LIBRARIES

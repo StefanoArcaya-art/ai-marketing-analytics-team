@@ -35,7 +35,7 @@ from IPython.display import Markdown
 from IPython.display import display, Image
 
 # Sub-Agents
-from customer_analytics_team.agents.marketing_agent import make_marketing_agent
+from customer_analytics_team.agents.marketing_email_writer_agent import make_marketing_email_writer_agent
 from customer_analytics_team.agents.product_expert import make_product_expert_agent
 from customer_analytics_team.agents.business_intelligence_agent import make_business_intelligence_agent
 
@@ -209,7 +209,7 @@ business_intelligence_agent
 # display(Image(business_intelligence_agent.get_graph().draw_png()))
 
 # Marketing Email Copy Writer
-marketing_agent = make_marketing_agent(model=MODEL)
+marketing_agent = make_marketing_email_writer_agent(model=MODEL)
 
 marketing_agent
 
@@ -230,10 +230,9 @@ class GraphState(TypedDict):
     chart_plotly_code: str
     chart_plotly_json: dict
     # Marketing Email Writer State Tracking
-    # TODO 
-    # final_email: str
-    # final_email_title: str
-    # email_list: list
+    email_list: list
+    email_subject: str
+    email_body: str
     
 
     
@@ -275,7 +274,9 @@ def email_writer_node(state):
     return {
         "messages": result.get("response"),
         # Marketing Email Writer State Tracking
-        # TODO 
+        "email_list": result.get("email_list"),
+        "email_subject": result.get("email_subject"),
+        "email_body": result.get("email_body"),
     }
 
 # * WORKFLOW DAG
@@ -295,7 +296,7 @@ workflow.add_edge('Marketing_Email_Writer', "supervisor")
 
 workflow.add_conditional_edges(
     "supervisor", 
-    lambda state: state["next"], 
+    lambda state: state.get("next"), 
     {
         'Product_Expert': 'Product_Expert', 
         'Business_Intelligence_Expert': 'Business_Intelligence_Expert', 
@@ -304,6 +305,8 @@ workflow.add_conditional_edges(
     }
 )
 
+
+# * NEW: Short Term Memory
 checkpointer = MemorySaver()
 
 app = workflow.compile(checkpointer=checkpointer)
@@ -340,9 +343,14 @@ for message in result['messages']:
     pprint(message.content)
     
 # Getting State Elements
+
 pprint(result['sql_query'])
 
 pd.DataFrame(result['data'])
+
+result['email_list']
+result['email_subject']
+Markdown(result['email_body'])
 
 
 # TEST: Persistant Short Term Memory
@@ -360,4 +368,4 @@ result = app.invoke(
 
 result
 
-pprint(result['messages'][-1].content)
+Markdown(result['messages'][-1].content)

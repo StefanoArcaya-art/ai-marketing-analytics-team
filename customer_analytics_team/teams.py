@@ -16,7 +16,7 @@ import operator
 
 
 from customer_analytics_team.agents.business_intelligence_agent import make_business_intelligence_agent
-from customer_analytics_team.agents.marketing_agent import make_marketing_agent
+from customer_analytics_team.agents.marketing_email_writer_agent import make_marketing_email_writer_agent
 from customer_analytics_team.agents.product_expert import make_product_expert_agent
 
 from customer_analytics_team.agents.utils import get_last_human_message
@@ -36,7 +36,7 @@ def make_customer_analytics_team(model, path_products_vector_db, path_transactio
     
     product_expert_agent = make_product_expert_agent(model=llm, db_path=path_products_vector_db)
     business_intelligence_agent = make_business_intelligence_agent(model=llm, db_path=path_transactions_sql_db)
-    marketing_agent = make_marketing_agent(model=llm)
+    marketing_agent = make_marketing_email_writer_agent(model=llm)
     
     # * CREATE SUPERVISOR
         

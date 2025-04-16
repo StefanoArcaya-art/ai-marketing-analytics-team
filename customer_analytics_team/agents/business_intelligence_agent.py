@@ -1,8 +1,8 @@
 # *** BUSINESS INTELLIGENCE EXPERT (CLINIC #2) ***
 
 # Key Modifications:
-# 1. Routing Preprocessor Agent: Now gets chat_history
-# 2. Summarizer: Added to summarize the analysis results, summary gets returned to the Supervisor Agent
+# 1. Routing Preprocessor Agent: Now gets Messages History "chat_history"
+# 2. New Summarizer Step: Added to summarize the analysis results, summary gets returned to the Supervisor Agent
 
 from langchain_core.output_parsers import StrOutputParser, JsonOutputParser
 from langchain.prompts import PromptTemplate
