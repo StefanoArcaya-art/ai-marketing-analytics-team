@@ -58,19 +58,21 @@ PATH_PRODUCTS_VECTORDB = "data/data-rag-product-information/products_clean.db"
 
 PATH_TRANSACTIONS_DATABASE = "sqlite:///data/database-sql-transactions/leads_scored.db"
 
-SUBAGENT_NAMES = ["Product_Expert", "Business_Intelligence_Expert", "Marketing_Email_Writer"]
-
 
 
 # * STEP 1: MAKE SUPERVISOR AGENT 
 
-def make_supervisor_agent(model, subagent_names: list, temperature=0):
+def make_marketing_analytics_supervisor_agent(model, temperature=0):
+    
+    subagent_names = ["Product_Expert", "Business_Intelligence_Expert", "Marketing_Email_Writer"]
     
     # Handle case when users want to make a different model than ChatOpenAI
     if isinstance(model, str):
         llm = ChatOpenAI(model = model)
     else:
         llm = model 
+        
+        
 
     system_prompt = (
         """
@@ -122,8 +124,6 @@ def make_supervisor_agent(model, subagent_names: list, temperature=0):
         ]
     ).partial(route_options=str(route_options), subagent_names=", ".join(subagent_names))
     
-    llm.temperature = temperature
-    
     supervisor_chain = (
         prompt
         | llm.bind(functions=[function_def], function_call={"name": "route"})
@@ -158,9 +158,8 @@ def make_supervisor_agent(model, subagent_names: list, temperature=0):
     return app
     
 
-supervisor_agent = make_supervisor_agent(
+supervisor_agent = make_marketing_analytics_supervisor_agent(
     model=MODEL, 
-    subagent_names=SUBAGENT_NAMES, 
     temperature=0.7
 )
 
