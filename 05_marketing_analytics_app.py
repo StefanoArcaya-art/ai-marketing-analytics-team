@@ -26,11 +26,17 @@ from marketing_analytics_team.teams import make_marketing_analytics_team
 
 warnings.filterwarnings("ignore", category=pd.errors.SettingWithCopyWarning)
 
+# Key Inputs:
+CHAT_LLM_OPTIONS = ["gpt-4.1-nano", "gpt-4.1-mini", "gpt-4.1", "gpt-4o-mini", "gpt-4o"]
+EMBEDDING_OPTIONS = ["text-embedding-ada-002"]
+PATH_TRANSACTIONS_DB = "sqlite:///data/database-sql-transactions/leads_scored.db"
+PATH_PRODUCTS_VDB   = "data/data-rag-product-information/products_clean.db"
+
 # * STREAMLIT APP SETUP ----
 st.set_page_config(page_title="Your AI Marketing Analytics Copilot", page_icon=":bar_chart:", layout="wide")
 st.title("Your AI Marketing Analytics Agent")
 
-with st.expander("I'm a complete marketing analytics copilot that contains a team of experts: business intelligence, product knowledge, and marketing email writing. (see example questions)"):
+with st.expander("I'm a complete marketing analytics copilot that contains a team of experts: Business intelligence SQL Expert, Product Expert, Marketing email writer. (see example questions)"):
     st.markdown(
         """
         - **Product Expert:** What are the key features of the 5-Course R-Track? 
@@ -40,15 +46,9 @@ with st.expander("I'm a complete marketing analytics copilot that contains a tea
     )
 
 # * Sidebar: Model & Database Selection ----
-CHAT_LLM_OPTIONS = ["gpt-4.1-nano", "gpt-4.1-mini", "gpt-4.1", "gpt-4o-mini", "gpt-4o"]
-EMBEDDING_OPTIONS = ["text-embedding-ada-002"]
 
 model_option = st.sidebar.selectbox("Choose OpenAI model", CHAT_LLM_OPTIONS)
 embed_option = st.sidebar.selectbox("Choose embedding model", EMBEDDING_OPTIONS)
-
-# map your file names to full paths / connection strings
-PATH_TRANSACTIONS_DB = "sqlite:///data/database-sql-transactions/leads_scored.db"
-PATH_PRODUCTS_VDB   = "data/data-rag-product-information/products_clean.db"
 
 # * Initialize LLM & Team ----
 llm = ChatOpenAI(model=model_option)
@@ -128,14 +128,14 @@ if prompt := st.chat_input("Enter your marketing analytics request here…"):
 
         # 2. Capture & display any plotly chart
         if result.get("chart_plotly_json"):
-            fig = pio.from_json(result["chart_plotly_json"])
+            fig = pio.from_json(result.get("chart_plotly_json"))
             i = len(st.session_state.plots)
             st.session_state.plots.append(fig)
             msgs.add_ai_message(f"PLOT_INDEX:{i}")
 
         # 3. Capture & display any tabular data
         elif result.get("data"):
-            df = pd.DataFrame(result["data"])
+            df = pd.DataFrame(result.get("data"))
             i = len(st.session_state.dataframes)
             st.session_state.dataframes.append(df)
             msgs.add_ai_message(f"DATAFRAME_INDEX:{i}")
@@ -143,15 +143,15 @@ if prompt := st.chat_input("Enter your marketing analytics request here…"):
         # 4. Email outputs
         #    Subject
         subj_idx = len(st.session_state.email_subjects)
-        st.session_state.email_subjects.append(result["email_subject"])
+        st.session_state.email_subjects.append(result.get("email_subject"))
         msgs.add_ai_message(f"EMAIL_SUBJECT_INDEX:{subj_idx}")
         #    Body
         body_idx = len(st.session_state.email_bodies)
-        st.session_state.email_bodies.append(result["email_body"])
+        st.session_state.email_bodies.append(result.get("email_body"))
         msgs.add_ai_message(f"EMAIL_BODY_INDEX:{body_idx}")
         #    List
         list_idx = len(st.session_state.email_lists)
-        st.session_state.email_lists.append(result["email_list"])
+        st.session_state.email_lists.append(result.get("email_list"))
         msgs.add_ai_message(f"EMAIL_LIST_INDEX:{list_idx}")
 
         # 5. Rerender everything
