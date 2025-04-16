@@ -368,3 +368,31 @@ result = app.invoke(
 result
 
 Markdown(result['messages'][-1].content)
+
+
+# * STEP 4: MODULARIZE THE APP
+
+from marketing_analytics_team.teams import make_marketing_analytics_team
+
+marketing_analytics_team = make_marketing_analytics_team(
+    model=MODEL,
+    model_embedding=EMBEDDINGS_MODEL,
+    db_path=PATH_PRODUCTS_VECTORDB,
+    db_path_transactions=PATH_TRANSACTIONS_DATABASE,
+    add_short_term_memory=True,
+)
+
+# TEST: Complete team usage
+
+messages = [HumanMessage(content="Find the top 20 email subscribers ranked by probability of purchase (p1 lead score in the leads_scored table) who have have not purchased any courses yet? Have the Product Expert collect information on the 5-Course R-Track for use with the Marketing Expert. Have the Marketing Expert write a compelling marketing email.")]
+
+
+result = app.invoke(
+    input = {"messages": messages},
+    # * NEW: Add thread_id
+    config = {
+        "recursion_limit": 10,
+        "configurable": {"thread_id": "123"}
+    },
+)
+result
