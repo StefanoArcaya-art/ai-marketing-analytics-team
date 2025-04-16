@@ -132,20 +132,6 @@ for document in documents_clean:
     print(len(document.page_content))
     print("---")
 
-# * Chunk into 500-1000 using Recursive Splitter
-
-CHUNK_SIZE = 1000
-
-text_splitter_recursive = RecursiveCharacterTextSplitter(
-    chunk_size = CHUNK_SIZE,
-    chunk_overlap=100,
-)
-
-documents_clean_recursive = text_splitter_recursive.split_documents(documents_clean)
-
-documents_clean_recursive
-
-len(documents_clean_recursive)
 
 # * Text Embeddings
 # OpenAI Embeddings
@@ -156,50 +142,26 @@ embedding_function = OpenAIEmbeddings(
     model=EMBEDDING,
 )
 
-# ** Vector Store - Recursively Split Documents
-
-# Create the Vector Store (Run 1st Time)
-# vectorstore_1 = Chroma.from_documents(
-#     documents_clean_recursive, 
-#     embedding=embedding_function, 
-#     persist_directory="data/data-rag-product-information/products_recursive_3.db"
-# )
-
-# Connect to the Vector Store (Run all other times)
-vectorstore_1 = Chroma(
-    embedding_function=embedding_function, 
-    persist_directory="data/data-rag-product-information/products_recursive_2.db"
-)
-
-vectorstore_1
-
-vectorstore_1.similarity_search("Is the 4-Course R-Track Open for Enrollment?", k = 4)
-
-
-retriever_1 = vectorstore_1.as_retriever()
-
-retriever_1
-
 # ** Vector Store - Complete (Large) Documents
 
 # Create the Vector Store (Run 1st Time)
-# vectorstore_2 = Chroma.from_documents(
+# vectorstore_1 = Chroma.from_documents(
 #     documents_clean, 
 #     embedding=embedding_function, 
 #     persist_directory="data/data-rag-product-information/products_clean_2.db"
 # )
 
 # Connect to the Vector Store (Run all other times)
-vectorstore_2 = Chroma(
+vectorstore_1 = Chroma(
     embedding_function=embedding_function, 
-    persist_directory="data/data-rag-product-information/products_clean_2.db"
+    persist_directory="data/data-rag-product-information/products_clean.db"
 )
 
-vectorstore_2
+vectorstore_1
 
-vectorstore_2.similarity_search("Is the 4-Course R-Track Open for Enrollment?", k = 4)
+vectorstore_1.similarity_search("Is the 4-Course R-Track Open for Enrollment?", k = 4)
 
-retriever_2 = vectorstore_2.as_retriever()
+retriever_1 = vectorstore_1.as_retriever()
 
 # * Prompt template 
 
@@ -224,7 +186,6 @@ Markdown(response.content)
 
 # * RAG Chain
 
-# * Test 1: With Recursive Chunking
 
 rag_chain_1 = (
     {"context": retriever_1, "question": RunnablePassthrough()}
@@ -237,21 +198,7 @@ result = rag_chain_1.invoke("Is the 4-Course R-Track Open for Enrollment?")
 
 Markdown(result)
 
-# * Test 2: With No Chunking
 
-rag_chain_2 = (
-    {"context": retriever_2, "question": RunnablePassthrough()}
-    | prompt
-    | model
-    | StrOutputParser()
-)
-
-result = rag_chain_2.invoke("Is the 4-Course R-Track Open for Enrollment?")
-
-Markdown(result)
-
-# * Conclusion: 
-# - The Non-Chunked LLM quickly discovered that the 4-course R-Track was closed for enrollment
 
 
 # * STEP 2: MAKE THE RAG AGENT
