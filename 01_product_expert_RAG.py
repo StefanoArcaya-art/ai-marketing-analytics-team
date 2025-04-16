@@ -12,7 +12,6 @@ from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 # Rag Agents
 from langchain_chroma import Chroma
 from langchain.document_loaders import WebBaseLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
@@ -208,7 +207,7 @@ Markdown(result)
 #  - Implement LangGraph Messages History to track multi-agent conversations
 
 # Libraries 
-from customer_analytics_team.agents.product_expert import make_product_expert_agent
+from marketing_analytics_team.agents.product_expert import make_product_expert_agent
 
 # Make the agent
 

@@ -17,7 +17,7 @@ from langgraph.graph import StateGraph, START, END
 
 from typing import Sequence, TypedDict
 
-from customer_analytics_team.agents.utils import get_last_human_message
+from marketing_analytics_team.agents.utils import get_last_human_message
 
 # AGENT
 

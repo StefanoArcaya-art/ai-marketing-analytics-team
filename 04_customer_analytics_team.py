@@ -35,9 +35,9 @@ from IPython.display import Markdown
 from IPython.display import display, Image
 
 # Sub-Agents
-from customer_analytics_team.agents.marketing_email_writer_agent import make_marketing_email_writer_agent
-from customer_analytics_team.agents.product_expert import make_product_expert_agent
-from customer_analytics_team.agents.business_intelligence_agent import make_business_intelligence_agent
+from marketing_analytics_team.agents.marketing_email_writer_agent import make_marketing_email_writer_agent
+from marketing_analytics_team.agents.product_expert import make_product_expert_agent
+from marketing_analytics_team.agents.business_intelligence_agent import make_business_intelligence_agent
 
 # Add Short Term Memory
 from langgraph.checkpoint.memory import MemorySaver

@@ -15,16 +15,17 @@ from typing import Annotated, Sequence, TypedDict
 import operator
 
 
-from customer_analytics_team.agents.business_intelligence_agent import make_business_intelligence_agent
-from customer_analytics_team.agents.marketing_email_writer_agent import make_marketing_email_writer_agent
-from customer_analytics_team.agents.product_expert import make_product_expert_agent
+from marketing_analytics_team.agents.business_intelligence_agent import make_business_intelligence_agent
+from marketing_analytics_team.agents.marketing_email_writer_agent import make_marketing_email_writer_agent
+from marketing_analytics_team.agents.product_expert import make_product_expert_agent
+from marketing_analytics_team.agents.supervisor_agent import make_marketing_analytics_supervisor_agent
 
-from customer_analytics_team.agents.utils import get_last_human_message
+from marketing_analytics_team.agents.utils import get_last_human_message
 
 
 # * TEAM CREATION
 
-def make_customer_analytics_team(model, path_products_vector_db, path_transactions_sql_db):
+def make_marketing_analytics_team(model, path_products_vector_db, path_transactions_sql_db):
     
     # Handle case when users want to make a different model than ChatOpenAI
     if isinstance(model, str):

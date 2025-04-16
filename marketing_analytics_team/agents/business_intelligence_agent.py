@@ -25,8 +25,8 @@ from pprint import pprint
 
 from typing import Sequence, TypedDict
 
-from customer_analytics_team.agents.utils import get_last_human_message
-from customer_analytics_team.agents.utils import SQLOutputParser, PythonOutputParser
+from marketing_analytics_team.agents.utils import get_last_human_message
+from marketing_analytics_team.agents.utils import SQLOutputParser, PythonOutputParser
 
 # KEY INPUTS
 

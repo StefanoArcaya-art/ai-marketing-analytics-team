@@ -6,7 +6,7 @@
 
 # LIBRARIES
 
-from customer_analytics_team.agents.marketing_email_writer_agent import make_marketing_email_writer_agent
+from marketing_analytics_team.agents.marketing_email_writer_agent import make_marketing_email_writer_agent
 
 from langchain_core.messages import HumanMessage
 

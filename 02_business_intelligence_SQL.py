@@ -7,7 +7,7 @@
 
 # LIBRARIES
 
-from customer_analytics_team.agents.business_intelligence_agent import make_business_intelligence_agent
+from marketing_analytics_team.agents.business_intelligence_agent import make_business_intelligence_agent
 
 from langchain_core.messages import HumanMessage
 
