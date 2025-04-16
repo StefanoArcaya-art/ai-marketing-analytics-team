@@ -190,7 +190,7 @@ def make_business_intelligence_agent(model, db_path):
         - For line plots, the line width should be updated on traces (example: # Update traces
     fig.update_traces(line=dict(color='#3381ff', width=0.65)))
         - For Bar plots, the default line width is acceptable
-        - Super important - Make sure to print(fig_dict)
+        
         """,
         input_variables=["chart_instructions", "data"]
     )
@@ -244,7 +244,8 @@ def make_business_intelligence_agent(model, db_path):
         summary: str # NEW - summary of the analysis results
         
     def preprocess_routing(state):
-        print("---ROUTER---")
+        print("---BUSINESS INTELLIGENCE EXPERT---")
+        print("    * PREPROCESSOR AND ROUTING")
         
         # Get the user question and chat history
         messages = state.get("messages")
@@ -256,7 +257,8 @@ def make_business_intelligence_agent(model, db_path):
         # Chart Routing and SQL Prep
         response = routing_preprocessor.invoke({"initial_question": last_human_question, "chat_history": messages})
         
-        pprint(response['formatted_user_question_sql_only'])
+        # print("formatted user question sql only:")
+        # pprint(response['formatted_user_question_sql_only'])
         
         formatted_user_question_sql_only = response['formatted_user_question_sql_only']
         
@@ -269,7 +271,7 @@ def make_business_intelligence_agent(model, db_path):
         }
         
     def generate_sql(state):
-        print("---GENERATE SQL---")
+        print("    * GENERATE SQL")
         question = state.get("formatted_user_question_sql_only")
         
         # Handle case when formatted_user_question_sql_only is None:
@@ -282,13 +284,13 @@ def make_business_intelligence_agent(model, db_path):
         return {"sql_query": sql_query}
 
     def convert_dataframe(state):
-        print("---CONVERT DATA FRAME---")
+        print("    * CONVERT DATA FRAME")
 
         sql_query = state.get("sql_query")
         
-        pprint(state)
+        # pprint(state)
         
-        pprint(sql_query)
+        # pprint(sql_query)
         
         # Generate Data Frame
         sql_engine = sql.create_engine(PATH_DB)
@@ -300,11 +302,11 @@ def make_business_intelligence_agent(model, db_path):
         return {"data": df.to_dict(orient="records")}
 
     def decide_chart_or_table(state):
-        print("---DECIDE CHART OR TABLE---")
+        print("    * DECIDE CHART OR TABLE")
         return "chart" if state.get('routing_preprocessor_decision') == "chart" else "table"
 
     def instruct_chart_generator(state):
-        print("---INSTRUCT CHART GENERATOR---")
+        print("    * INSTRUCT CHART GENERATOR")
         
         # Get the user question and data
         question = state.get("user_question")
@@ -320,7 +322,7 @@ def make_business_intelligence_agent(model, db_path):
         return {"chart_generator_instructions": chart_generator_instructions}
 
     def generate_chart(state):
-        print("---GENERATE CHART---")
+        print("    * GENERATE CHART")
         
         # Get the chart generator instructions and data
         chart_instructions = state.get("chart_generator_instructions")
@@ -363,7 +365,7 @@ def make_business_intelligence_agent(model, db_path):
     
     # * NEW: Summarizer Node
     def summarize_results(state):
-        print("---SUMMARIZE RESULTS----")
+        print("    * SUMMARIZE RESULTS")
         
         result = summarizer.invoke({"results": dict(state)})
         
@@ -373,8 +375,7 @@ def make_business_intelligence_agent(model, db_path):
         }
         
     def state_printer(state):
-        """print the state"""
-        print("---STATE PRINTER---")
+        print("    * STATE PRINTER")
         print(f"User Question: {state['user_question']}")
         print(f"Formatted Question (SQL): {state['formatted_user_question_sql_only']}")
         print(f"SQL Query: \n{state['sql_query']}\n")

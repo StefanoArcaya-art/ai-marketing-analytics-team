@@ -165,7 +165,7 @@ def make_marketing_analytics_team(model, model_embedding, path_products_vector_d
     else:
         app = workflow.compile()
 
-    app
+    return app
     
     
 
