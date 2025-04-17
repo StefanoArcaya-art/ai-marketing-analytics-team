@@ -315,7 +315,7 @@ with st.expander("I'm a complete marketing analytics copilot that contains a tea
         #### Segment Analysis Agent
         
         - What are the segments in the leads_scored_segmentation table?
-        - Have the Segment Analysis Agent analyze the segments in the leads_scored_segmentation table and provide a summary of each segment. Have the Business Intelligence Expert find the top 20 high value buyers from the segment analysis (as Identified by segment High-Value Frequent Buyers). Return the top 20 in that segment ranked by p1 lead score. Do not engage the Product Expert or Marketing Expert.
+        - Have the Business Intelligence Expert find the top 20 high value buyers from segment 2 (High-Value Frequent Buyers). Return the top 20 in that segment ranked by p1 lead score. Do not engage the Product Expert or Marketing Expert.
         
         """
     )
