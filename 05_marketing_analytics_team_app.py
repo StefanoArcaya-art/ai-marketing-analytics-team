@@ -35,12 +35,13 @@ PATH_TRANSACTIONS_DB = "sqlite:///data/database-sql-transactions/leads_scored.db
 PATH_PRODUCTS_VDB     = "data/data-rag-product-information/products_clean.db"
 
 # -- Streamlit Page Setup ---------------------------------------------------
+TITLE = "AI Marketing Analytics Team"
 st.set_page_config(
-    page_title="AI Marketing Analytics Agent",
+    page_title=TITLE,
     page_icon=":bar_chart:",
     layout="wide"
 )
-st.title("Your AI Marketing Analytics Agent")
+st.title(TITLE)
 
 
 with st.expander("I'm a complete marketing analytics copilot that contains a team of experts: Business intelligence SQL Expert, Product Expert, Marketing email writer. (see example questions)"):

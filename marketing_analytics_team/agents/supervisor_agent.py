@@ -44,10 +44,10 @@ def make_marketing_analytics_supervisor_agent(model, temperature=0):
             customer segments identified by the Business_Intelligence_Expert.
 
         Assignment Rules:
-        • Track which worker acted last.  
-        • **Never** assign the same worker twice in a row unless they explicitly request to continue.  
-        • If the same expertise is needed twice, see if a different worker can handle the follow‐up (e.g., BI_Expert hands off to Product_Expert for context).  
-        • When multiple workers can fulfill a request, rotate in round‐robin order to balance workload.
+        - IMPORTANT: **Never** assign the same worker twice in a row unless the worker explicitly requests to continue.  
+        - Track which worker acted last and the one previous.  Do not assign the same worker twice in a row.
+        - If the same expertise is needed twice, see if a different worker can handle the follow‐up (e.g., Business_Intelligence_Expert hands off to Product_Expert for context).  
+        - When multiple workers can fulfill a request, rotate in round‐robin order to balance workload.
 
         Workflow:
         1. Read the user’s request.  
