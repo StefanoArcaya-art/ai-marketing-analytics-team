@@ -3,7 +3,7 @@
 
 from typing import Dict, Any, Sequence
 import pandas as pd
-import sqlite3
+from sqlalchemy import create_engine
 from langchain_openai import ChatOpenAI
 from langchain.prompts import PromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
@@ -13,7 +13,7 @@ from typing import Sequence, TypedDict
 import plotly.express as px
 from marketing_analytics_team.agents.utils import get_last_human_message
 
-db_path = "challenges/data/database-sql-transactions/leads_scored_segmentation.db"
+db_path = "sqlite:///challenges/data/database-sql-transactions/leads_scored_segmentation.db"
 
 
 def make_segment_analysis_agent(model, db_path, temperature=0):
@@ -89,7 +89,8 @@ def make_segment_analysis_agent(model, db_path, temperature=0):
         print("---SEGMENT ANALYSIS AGENT---")
 
         # Connect to database
-        conn = sqlite3.connect(db_path)
+        engine = create_engine(db_path)
+        conn = engine.connect()
         leads_query = """
         SELECT user_email, p1, member_rating, segment
         FROM leads_scored
@@ -151,7 +152,7 @@ def make_segment_analysis_agent(model, db_path, temperature=0):
 
         # Create summary table with LLM-generated labels
         if result["analysis_required"]:
-            summary_table = df_summary[["segment_name", "avg_p1", "avg_member_rating", "avg_purchase_frequency", "customer_count"]].to_markdown(index=False)
+            summary_table = df_summary[["segment_name", "segment", "avg_p1", "avg_member_rating", "avg_purchase_frequency", "customer_count"]].to_markdown(index=False)
             # Update result with the correct summary table
             result["summary_table"] = summary_table
         else:
@@ -215,7 +216,7 @@ if __name__ == "__main__":
     
     # Example usage
     model = "gpt-4.1-nano"
-    db_path = "challenges/data/database-sql-transactions/leads_scored_segmentation.db"
+    db_path = "sqlite:///challenges/data/database-sql-transactions/leads_scored_segmentation.db"
     temperature = 0.7
 
     agent = make_segment_analysis_agent(model, db_path, temperature)
@@ -224,12 +225,15 @@ if __name__ == "__main__":
     
     results = agent.invoke({"messages": messages})
     
+    results.keys()
+    
     Markdown(results['response'][0].content)
     
     # Display the chart
     import plotly.io as pio
-    import json
     fig = pio.from_json(results['chart_json'])
     fig
     
+    # Display Summary Table
+    Markdown(results['summary_table'])
     
