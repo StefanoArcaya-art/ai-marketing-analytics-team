@@ -76,6 +76,11 @@ with st.expander("I'm a complete marketing analytics copilot that contains a tea
         - Find the top 20 email subscribers ranked by probability of purchase (p1 lead score in the leads_scored table) who have have not purchased any courses yet? Have the Product Expert collect information on the 5-Course R-Track for use with the Marketing Expert. Have the Marketing Expert write a compelling marketing email.
         - Have the marketing email writer remove Kamryn Tremblay from the email list
         
+        #### Segment Analysis Agent
+        
+        - What are the segments in the leads_scored_segmentation table?
+        - Have the Business Intelligence Expert find the top 20 high value buyers from segment 2 (High-Value Frequent Buyers). Return the top 20 in that segment ranked by p1 lead score who have not purchased Learning Labs PRO product. Do not engage the Product Expert or Marketing Expert.
+        - Have the Product Expert collect information on the 5-Course R-Track for use with the Marketing Expert. Have the Marketing Expert write a compelling marketing email to the 20 high value buyers from the previous analysis. Don't engage the Business Intelligence Expert or the Segment Agent.
         """
     )
 

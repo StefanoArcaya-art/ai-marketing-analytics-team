@@ -7,7 +7,7 @@
 # Tracks: email_subject, email_body, email_list, plots/data, intermediate responses
 
 # Command Line:
-#   streamlit run app.py
+#   streamlit run marketing_analytics_team_app_2.py
 
 # LIBRARIES ----
 import streamlit as st
@@ -18,29 +18,25 @@ import warnings
 import uuid
 
 from langchain_core.messages import HumanMessage, AIMessage
-
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_community.chat_message_histories import StreamlitChatMessageHistory
 from langgraph.checkpoint.memory import MemorySaver
 
-# * NEW: Add Project Root:
+# Add project root directory to sys.path
 import sys
 from pathlib import Path
-
-# Add project root directory to sys.path
-project_root = Path(__file__).resolve().parents[2]  # Adjust number based on depth from root
+project_root = Path(__file__).resolve().parents[2]
 sys.path.append(str(project_root))
 
 warnings.filterwarnings("ignore", category=pd.errors.SettingWithCopyWarning)
 
 # -- Constants & Config ------------------------------------------------------
-CHAT_LLM_OPTIONS   = ["gpt-4.1-mini", "gpt-4.1", "gpt-4o-mini", "gpt-4o"]
-EMBEDDING_OPTIONS  = ["text-embedding-ada-002"]
+CHAT_LLM_OPTIONS = ["gpt-4.1-mini", "gpt-4.1", "gpt-4o-mini", "gpt-4o"]
+EMBEDDING_OPTIONS = ["text-embedding-ada-002"]
 PATH_TRANSACTIONS_DB = "sqlite:///challenges/data/database-sql-transactions/leads_scored_segmentation.db"
-PATH_PRODUCTS_VDB     = "data/data-rag-product-information/products_clean.db"
+PATH_PRODUCTS_VDB = "data/data-rag-product-information/products_clean.db"
 
 # -- Marketing Analytics Team Agent 2 ------------------------------------------
-
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.output_parsers.openai_functions import JsonOutputFunctionsParser
 from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
@@ -187,7 +183,7 @@ def make_marketing_analytics_team_2(model, model_embedding, path_products_vector
 
     segment_analysis_agent = make_segment_analysis_agent(
         model=model,
-        db_path=path_transactions_sql_db.replace("leads_scored.db", "leads_scored_segmentation.db"),
+        db_path=path_transactions_sql_db,
         temperature=0.7
     )
 
@@ -281,7 +277,6 @@ def make_marketing_analytics_team_2(model, model_embedding, path_products_vector
 
     return app
 
-
 # -- Streamlit Page Setup ---------------------------------------------------
 TITLE = "AI Marketing Analytics Team"
 st.set_page_config(
@@ -291,50 +286,43 @@ st.set_page_config(
 )
 st.title(TITLE)
 
-
-with st.expander("I'm a complete marketing analytics copilot that contains a team of experts: Business intelligence SQL Expert, Product Expert, Marketing email writer. (see example questions)"):
+with st.expander("I'm a complete marketing analytics copilot that contains a team of experts: Business intelligence SQL Expert, Product Expert, Marketing email writer, Segment Analysis Agent. (see example questions)"):
     st.markdown(
         """
         #### Business Intelligence
-        
         - What tables are in the SQL database?
         - What does the leads_scored table look like?
         - What are the top 10 customers by revenue?
         - Draw a bar chart of the top 10 customers by revenue.
         
         #### Product Expert
-        
         - What are the key features of the 5-Course R-Track?
         - What products are available in the database?
         
         #### Marketing Email Writer
-        
-        - Find the top 20 email subscribers ranked by probability of purchase (p1 lead score in the leads_scored table) who have have not purchased any courses yet? Have the Product Expert collect information on the 5-Course R-Track for use with the Marketing Expert. Have the Marketing Expert write a compelling marketing email.
+        - Find the top 20 email subscribers ranked by probability of purchase (p1 lead score in the leads_scored table) who have not purchased any courses yet? Have the Product Expert collect information on the 5-Course R-Track for use with the Marketing Expert. Have the Marketing Expert write a compelling marketing email.
         - Have the marketing email writer remove Kamryn Tremblay from the email list
         
         #### Segment Analysis Agent
-        
         - What are the segments in the leads_scored_segmentation table?
-        - Have the Business Intelligence Expert find the top 20 high value buyers from segment 2 (High-Value Frequent Buyers). Return the top 20 in that segment ranked by p1 lead score. Do not engage the Product Expert or Marketing Expert.
-        
+        - Have the Business Intelligence Expert find the top 20 high value buyers from segment 2 (High-Value Frequent Buyers). Return the top 20 in that segment ranked by p1 lead score who have not purchased Learning Labs PRO product. Do not engage the Product Expert or Marketing Expert.
+        - Have the Product Expert collect information on the 5-Course R-Track for use with the Marketing Expert. Have the Marketing Expert write a compelling marketing email to the 20 high value buyers from the previous analysis. Don't engage the Business Intelligence Expert or the Segment Agent.
         """
     )
-
 
 # -- Sidebar: Controls & Summary ---------------------------------------------
 with st.sidebar:
     st.header("Settings")
-    model_option         = st.selectbox("OpenAI Model", CHAT_LLM_OPTIONS)
-    embed_option         = st.selectbox("Embedding Model", EMBEDDING_OPTIONS)
+    model_option = st.selectbox("OpenAI Model", CHAT_LLM_OPTIONS)
+    embed_option = st.selectbox("Embedding Model", EMBEDDING_OPTIONS)
     add_short_term_memory = st.checkbox("Add Short-Term Memory", value=True)
-    show_reasoning       = True
+    show_reasoning = True
     if add_short_term_memory:
         if st.button("Clear Chat History"):
             msgs = StreamlitChatMessageHistory(key="marketing_messages")
             msgs.clear()
             msgs.add_ai_message("How can I help with your marketing analytics today?")
             st.session_state.details = []
-            # Clear checkpointer state (MemorySaver is in-memory, so just reinitialize)
             st.session_state.checkpointer = MemorySaver()
     else:
         st.session_state.checkpointer = None
@@ -361,6 +349,9 @@ if not msgs.messages:
 # -- Function to Render Chat ------------------------------------------------
 def display_chat_history():
     for i, msg in enumerate(msgs.messages):
+        # Skip initial greeting if there are newer messages
+        if i == 0 and msg.content == "How can I help with your marketing analytics today?" and len(msgs.messages) > 1:
+            continue
         with st.chat_message(msg.type):
             content = msg.content
             if content.startswith("DETAILS_INDEX:"):
@@ -383,7 +374,7 @@ def display_chat_history():
                     with tabs[2]:
                         if detail.get("chart_json"):
                             fig = pio.from_json(detail["chart_json"])
-                            st.plotly_chart(fig)
+                            st.plotly_chart(fig, key=f"plot_data_{i}")  # Unique key
                         elif detail.get("data") is not None:
                             df = pd.DataFrame(detail["data"])
                             st.dataframe(df)
@@ -399,13 +390,12 @@ def display_chat_history():
                     with tabs[4]:
                         if detail.get("segmentation_chart_json"):
                             fig = pio.from_json(detail["segmentation_chart_json"])
-                            st.plotly_chart(fig)
+                            st.plotly_chart(fig, key=f"segmentation_{i}")  # Unique key
                         if detail.get("segmentation_data") is not None:
                             df = pd.DataFrame(detail["segmentation_data"])
                             st.dataframe(df)
                         else:
                             st.info("No segmentation data returned.")
-                        
             else:
                 st.write(content)
 
@@ -418,16 +408,13 @@ marketing_team = make_marketing_analytics_team_2(
     model_embedding=embeddings,
     path_products_vector_db=PATH_PRODUCTS_VDB,
     path_transactions_sql_db=PATH_TRANSACTIONS_DB,
-    
-    # Short Term Memory
     checkpointer=st.session_state.checkpointer,
 )
 
 # -- Handle User Input & AI Response ----------------------------------------
 if prompt := st.chat_input("Enter your marketing analytics request here…"):
-
-    with st.spinner("Thinking..."):    
-        # 2. Add user message
+    with st.spinner("Thinking..."):
+        # Add user message
         st.chat_message("human").write(prompt)
         msgs.add_user_message(prompt)
 
@@ -435,11 +422,10 @@ if prompt := st.chat_input("Enter your marketing analytics request here…"):
             result = marketing_team.invoke(
                 input={
                     "messages": [HumanMessage(content=prompt)]
-                },  
+                },
                 config={
-                    "recursion_limit": 10, 
+                    "recursion_limit": 10,
                     "configurable": {
-                        # *New: Implement session specific thread_id
                         "thread_id": st.session_state.thread_id
                     }
                 }
@@ -450,20 +436,19 @@ if prompt := st.chat_input("Enter your marketing analytics request here…"):
             result = None
 
     if result:
-        
         recipients = result.get("email_list", [])
-        
-        # 3. Collect reasoning with agent names, only for AI messages after the latest Human message
+
+        # Collect reasoning with agent names, only for AI messages after the latest Human message
         reasoning = ""
         latest_human_index = -1
         for i, message in enumerate(result.get("messages", [])):
             if isinstance(message, HumanMessage):
-                latest_human_index = i  # Track the index of the latest Human message
-        for message in result.get("messages", [])[latest_human_index + 1:]:  # Process only messages after the latest Human message
+                latest_human_index = i
+        for message in result.get("messages", [])[latest_human_index + 1:]:
             if isinstance(message, AIMessage):
                 reasoning += f"##### {message.name}:\n\n{message.content}\n\n---\n\n"
-        
-        # 4. Collect detail
+
+        # Collect detail
         detail = {
             "reasoning": reasoning,
             "sql_query": result.get("sql_query"),
@@ -472,7 +457,6 @@ if prompt := st.chat_input("Enter your marketing analytics request here…"):
             "title": result.get("email_subject"),
             "body": result.get("email_body"),
             "list": recipients,
-            # Add Segmentation details
             "segmentation_chart_json": result.get("chart_json"),
             "segmentation_data": result.get("segmentation_data"),
         }
