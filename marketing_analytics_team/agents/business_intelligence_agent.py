@@ -367,7 +367,18 @@ def make_business_intelligence_agent(model, db_path):
     def summarize_results(state):
         print("    * SUMMARIZE RESULTS")
         
-        result = summarizer.invoke({"results": dict(state)})
+        # Build a minimal payload for summarization to reduce token usage
+        # Error code: 429 - {'error': {'message': 'Request too large for gpt-4.1-mini-long-context in organization org-ljnmniNYtkh3c5B8LFIFv5ZF on tokens per min (TPM): Limit 400000, Requested 1647293. The input or output tokens must be reduced in order to run successfully. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}
+        summary_payload = {
+            "user_question": state.get("user_question"),
+            "sql_query": state.get("sql_query"),
+            "routing_processor_decision": state.get("routing_preprocessor_decision"),
+            # include up to first 10 rows for context
+            "data_preview": state.get("data", [])[:100],
+            "chart_plotly_code": state.get("chart_plotly_code"),
+        }
+        
+        result = summarizer.invoke({"results": summary_payload})
         
         return {
             "summary": result,
