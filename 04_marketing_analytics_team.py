@@ -39,7 +39,7 @@ from marketing_analytics_team.agents.marketing_email_writer_agent import make_ma
 from marketing_analytics_team.agents.product_expert import make_product_expert_agent
 from marketing_analytics_team.agents.business_intelligence_agent import make_business_intelligence_agent
 
-# Add Short Term Memory
+# * NEW: Add Short Term Memory
 from langgraph.checkpoint.memory import MemorySaver
 
 
@@ -368,7 +368,6 @@ messages = [HumanMessage(content="Make sure to remove Kamryn Tremblay from the e
 
 result = app.invoke(
     input = {"messages": messages},
-    # * NEW: Add thread_id
     config = {
         "recursion_limit": 10,
         "configurable": {"thread_id": "123"}
@@ -384,12 +383,16 @@ Markdown(result['messages'][-1].content)
 
 from marketing_analytics_team.teams import make_marketing_analytics_team
 
+from langgraph.checkpoint.memory import MemorySaver
+
+checkpointer = MemorySaver()
+
 marketing_analytics_team = make_marketing_analytics_team(
     model=MODEL,
     model_embedding=EMBEDDINGS_MODEL,
     path_products_vector_db=PATH_PRODUCTS_VECTORDB,
     path_transactions_sql_db=PATH_TRANSACTIONS_DATABASE,
-    add_short_term_memory=True,
+    checkpointer=checkpointer
 )
 marketing_analytics_team
 
@@ -416,3 +419,17 @@ Markdown(result['email_subject'])
 
 result['email_list']
 
+# TEST: Persistant Short Term Memory
+
+messages = [HumanMessage(content="Marketing Writer: Make sure to remove Kamryn Tremblay from the email list when you make the email list. Please return the results with Kamryn Tremblay removed.")]
+
+result = marketing_analytics_team.invoke(
+    input = {"messages": messages},
+    # * NEW: Add thread_id
+    config = {
+        "recursion_limit": 10,
+        "configurable": {"thread_id": "123"}
+    },
+)
+
+result

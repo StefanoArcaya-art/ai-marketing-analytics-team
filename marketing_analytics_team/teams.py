@@ -26,7 +26,7 @@ from langgraph.checkpoint.memory import MemorySaver
 
 # * TEAM CREATION
 
-def make_marketing_analytics_team(model, model_embedding, path_products_vector_db, path_transactions_sql_db, add_short_term_memory=False):
+def make_marketing_analytics_team(model, model_embedding, path_products_vector_db, path_transactions_sql_db, checkpointer = None):
     """
     Create a AI Marketing Analytics Team with the following sub-agents:
     1. Product Expert Agent
@@ -40,7 +40,7 @@ def make_marketing_analytics_team(model, model_embedding, path_products_vector_d
         - model_embedding: The embedding model to use for the agents.
         - path_products_vector_db: Path to the vector database containing product information.
         - path_transactions_sql_db: Path to the SQL database containing transaction data.
-        - add_short_term_memory: Boolean flag to add short term memory to the workflow.
+        - checkpointer: Optional checkpointer for short term memory.
     
     Returns:
     -------
@@ -159,11 +159,7 @@ def make_marketing_analytics_team(model, model_embedding, path_products_vector_d
     )
 
     # * NEW: Short Term Memory
-    if add_short_term_memory:
-        checkpointer = MemorySaver()
-        app = workflow.compile(checkpointer=checkpointer)
-    else:
-        app = workflow.compile()
+    app = workflow.compile(checkpointer=checkpointer)
 
     return app
     

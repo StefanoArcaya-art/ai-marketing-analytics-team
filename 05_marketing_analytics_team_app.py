@@ -15,11 +15,13 @@ import pandas as pd
 import plotly.express as px
 import plotly.io as pio
 import warnings
+import uuid
 
 from langchain_core.messages import HumanMessage, AIMessage
 
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_community.chat_message_histories import StreamlitChatMessageHistory
+from langgraph.checkpoint.memory import MemorySaver
 
 from marketing_analytics_team.teams import make_marketing_analytics_team
 
@@ -59,6 +61,7 @@ with st.expander("I'm a complete marketing analytics copilot that contains a tea
         #### Marketing Email Writer
         
         - Find the top 20 email subscribers ranked by probability of purchase (p1 lead score in the leads_scored table) who have have not purchased any courses yet? Have the Product Expert collect information on the 5-Course R-Track for use with the Marketing Expert. Have the Marketing Expert write a compelling marketing email.
+        - Have the marketing email writer remove Kamryn Tremblay from the email list
         
         """
     )
@@ -71,14 +74,35 @@ with st.sidebar:
     embed_option         = st.selectbox("Embedding Model", EMBEDDING_OPTIONS)
     add_short_term_memory = st.checkbox("Add Short-Term Memory", value=True)
     show_reasoning       = True
+    if add_short_term_memory:
+        if st.button("Clear Chat History"):
+            msgs = StreamlitChatMessageHistory(key="marketing_messages")
+            msgs.clear()
+            msgs.add_ai_message("How can I help with your marketing analytics today?")
+            st.session_state.details = []
+            # Clear checkpointer state (MemorySaver is in-memory, so just reinitialize)
+            st.session_state.checkpointer = MemorySaver()
+    else:
+        st.session_state.checkpointer = None
+
+# -- Cache the Checkpointer --------------------------------------------------
+@st.cache_resource
+def get_checkpointer():
+    """Initialize and cache the LangGraph MemorySaver checkpointer."""
+    return MemorySaver()
+
+# -- Initialize Session State -----------------------------------------------
+if "thread_id" not in st.session_state:
+    st.session_state.thread_id = str(uuid.uuid4())  # Unique thread ID per session
+if "checkpointer" not in st.session_state:
+    st.session_state.checkpointer = get_checkpointer()  # Cache checkpointer
+if "details" not in st.session_state:
+    st.session_state.details = []
 
 # -- Initialize History & Detail Store --------------------------------------
 msgs = StreamlitChatMessageHistory(key="marketing_messages")
 if not msgs.messages:
     msgs.add_ai_message("How can I help with your marketing analytics today?")
-
-if "details" not in st.session_state:
-    st.session_state.details = []
 
 # -- Function to Render Chat ------------------------------------------------
 def display_chat_history():
@@ -89,7 +113,7 @@ def display_chat_history():
                 idx = int(content.split(":")[1])
                 detail = st.session_state.details[idx]
                 with st.expander("Marketing Analysis", expanded=True):
-                    tabs = st.tabs(["AI Reasoning", "SQL Query", "Plot/Data", "Email Body & List"])
+                    tabs = st.tabs(["AI Reasoning", "SQL Query", "Plot/Data", "Email & List"])
                     with tabs[0]:
                         text = detail.get("reasoning", "_(No reasoning available)_")
                         if show_reasoning:
@@ -112,6 +136,8 @@ def display_chat_history():
                         else:
                             st.info("No plot or data returned.")
                     with tabs[3]:
+                        st.markdown("**Subject:**")
+                        st.write(detail.get("title", ""))
                         st.markdown("**Body:**")
                         st.write(detail.get("body", ""))
                         st.markdown("**Recipients:**")
@@ -128,7 +154,9 @@ marketing_team = make_marketing_analytics_team(
     model_embedding=embeddings,
     path_products_vector_db=PATH_PRODUCTS_VDB,
     path_transactions_sql_db=PATH_TRANSACTIONS_DB,
-    add_short_term_memory=True,
+    
+    # Short Term Memory
+    checkpointer=st.session_state.checkpointer,
 )
 
 # -- Handle User Input & AI Response ----------------------------------------
@@ -141,8 +169,16 @@ if prompt := st.chat_input("Enter your marketing analytics request here…"):
 
         try:
             result = marketing_team.invoke(
-                input={"messages": [HumanMessage(content=prompt)]},  # Pass only the latest user query
-                config={"recursion_limit": 10, "configurable": {"thread_id": "marketing_thread"}}
+                input={
+                    "messages": [HumanMessage(content=prompt)]
+                },  
+                config={
+                    "recursion_limit": 10, 
+                    "configurable": {
+                        # *New: Implement session specific thread_id
+                        "thread_id": st.session_state.thread_id
+                    }
+                }
             )
         except Exception as e:
             st.error("Error invoking marketing team.")
@@ -155,11 +191,21 @@ if prompt := st.chat_input("Enter your marketing analytics request here…"):
         
         # reasoning = "\n\n".join([m.content for m in result.get("messages", []) if isinstance(m, AIMessage)])
         
+        # reasoning = ""
+        # for message in result.get("messages", []):
+        #     if isinstance(message, AIMessage):
+        #         reasoning += "##### " + message.name + ":\n\n"
+        #         reasoning += message.content + "\n\n---\n\n"
+        
+        # 3. Collect reasoning with agent names, only for AI messages after the latest Human message
         reasoning = ""
-        for message in result.get("messages", []):
+        latest_human_index = -1
+        for i, message in enumerate(result.get("messages", [])):
+            if isinstance(message, HumanMessage):
+                latest_human_index = i  # Track the index of the latest Human message
+        for message in result.get("messages", [])[latest_human_index + 1:]:  # Process only messages after the latest Human message
             if isinstance(message, AIMessage):
-                reasoning += "##### " + message.name + ":\n\n"
-                reasoning += message.content + "\n\n---\n\n"
+                reasoning += f"##### {message.name}:\n\n{message.content}\n\n---\n\n"
         
         # 4. Collect detail
         detail = {
@@ -167,6 +213,7 @@ if prompt := st.chat_input("Enter your marketing analytics request here…"):
             "sql_query": result.get("sql_query"),
             "chart_json": result.get("chart_plotly_json"),
             "data": result.get("data"),
+            "title": result.get("email_subject"),
             "body": result.get("email_body"),
             "list": recipients,
         }
