@@ -23,18 +23,22 @@ from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_community.chat_message_histories import StreamlitChatMessageHistory
 from langgraph.checkpoint.memory import MemorySaver
 
-from marketing_analytics_team.teams import make_marketing_analytics_team
-
-
-warnings.filterwarnings("ignore", category=pd.errors.SettingWithCopyWarning)
-
 # * NEW: Add Project Root:
 import sys
 from pathlib import Path
 
 # Add project root directory to sys.path
-project_root = Path(__file__).resolve().parents[1]  # Adjust number based on depth from root
+project_root = Path(__file__).resolve().parents[3]  # Adjust number based on depth from root
 sys.path.append(str(project_root))
+print(project_root)
+
+# Need to add project root to sys.path to import modules
+from marketing_analytics_team.teams import make_marketing_analytics_team
+
+
+warnings.filterwarnings("ignore", category=pd.errors.SettingWithCopyWarning)
+
+
 
 # -- Constants & Config ------------------------------------------------------
 CHAT_LLM_OPTIONS   = ["gpt-4.1-mini", "gpt-4.1", "gpt-4o-mini", "gpt-4o"]
