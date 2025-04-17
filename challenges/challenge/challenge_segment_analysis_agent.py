@@ -17,7 +17,7 @@ db_path = "challenges/data/database-sql-transactions/leads_scored_segmentation.d
 # SUPPORTING FILES:
 
 # segment_analysis_agent.py - This file contains the code for the Segment Analysis Agent.
-# generate_segmentation.py - This file contains the code for generating customer segments based on transaction data.
+# generate_segmentation.py - This file contains the code for generating customer segments based on transaction data. Note - I have already run this file to generate the segments for you.
 # marketing_analytics_team_2.py - Update this to include the Segment Analysis Agent.
 # marketing_analytics_team_app_2.py - Update this to include the Segment Analysis Agent.
 

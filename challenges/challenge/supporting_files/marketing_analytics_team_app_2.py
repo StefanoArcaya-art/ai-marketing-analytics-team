@@ -190,14 +190,6 @@ if prompt := st.chat_input("Enter your marketing analytics request here…"):
         
         recipients = result.get("email_list", [])
         
-        # reasoning = "\n\n".join([m.content for m in result.get("messages", []) if isinstance(m, AIMessage)])
-        
-        # reasoning = ""
-        # for message in result.get("messages", []):
-        #     if isinstance(message, AIMessage):
-        #         reasoning += "##### " + message.name + ":\n\n"
-        #         reasoning += message.content + "\n\n---\n\n"
-        
         # 3. Collect reasoning with agent names, only for AI messages after the latest Human message
         reasoning = ""
         latest_human_index = -1
