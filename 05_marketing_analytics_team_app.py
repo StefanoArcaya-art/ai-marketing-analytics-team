@@ -29,7 +29,13 @@ from marketing_analytics_team.teams import make_marketing_analytics_team
 warnings.filterwarnings("ignore", category=pd.errors.SettingWithCopyWarning)
 
 # -- Constants & Config ------------------------------------------------------
-CHAT_LLM_OPTIONS   = ["gpt-4.1-mini", "gpt-4.1", "gpt-4o-mini", "gpt-4o"]
+CHAT_LLM_OPTIONS   = [
+    # "gpt-4.1-nano", # Don't use this one, it's too small
+    "gpt-4.1-mini", 
+    "gpt-4.1", 
+    "gpt-4o-mini", 
+    "gpt-4o"
+]
 EMBEDDING_OPTIONS  = ["text-embedding-ada-002"]
 PATH_TRANSACTIONS_DB = "sqlite:///data/database-sql-transactions/leads_scored.db"
 PATH_PRODUCTS_VDB     = "data/data-rag-product-information/products_clean.db"
@@ -61,8 +67,8 @@ with st.expander("I'm a complete marketing analytics copilot that contains a tea
         
         #### Marketing Email Writer
         
-        - Find the top 20 email subscribers ranked by probability of purchase (p1 lead score in the leads_scored table) who have have not purchased any courses yet? Have the Product Expert collect information on the 5-Course R-Track for use with the Marketing Expert. Have the Marketing Expert write a compelling marketing email.
-        - Have the marketing email writer remove Kamryn Tremblay from the email list
+        - Find the top 20 email subscribers ranked by probability of purchase (p1 lead score in the leads_scored table) who have not purchased any courses yet? Have the Product Expert collect information on the 5-Course R-Track for use with the Marketing Expert. Have the Marketing Expert write a compelling marketing email.
+        - Have the marketing email writer remove Kamryn Tremblay from the email list. Do not use any other agents.
         
         """
     )
