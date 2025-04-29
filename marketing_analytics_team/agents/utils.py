@@ -24,35 +24,67 @@ def get_last_ai_message(msgs, target_name=None):
 
 # * Output Parsers for SQL and Python (Business Intelligence Agent)
 
-def extract_sql_code(text):
-    sql_code_match = re.search(r'```sql(.*?)```', text, re.DOTALL)
-    sql_code_match_2 = re.search(r"SQLQuery:\s*(.*)", text)
-    if sql_code_match:
-        sql_code = sql_code_match.group(1).strip()
-        return sql_code
-    if sql_code_match_2:
-        sql_code = sql_code_match_2.group(1).strip()
-        return sql_code
-    else:
-        sql_code_match = re.search(r"sql(.*?)'", text, re.DOTALL)
-        if sql_code_match:
-            sql_code = sql_code_match.group(1).strip()
-            return sql_code
-        else:
-            return None
+def extract_sql_code(text: str):
+    """
+    Extracts the SQL query from a block of text. Handles:
+      1) SQLQuery: ```sql ...``` fences
+      2) ```sql ...``` fences
+      3) ``` … ``` fences containing a SELECT
+      4) SQLQuery: … (no fences)
+      5) Bare SELECT …; up to semicolon
+    Returns the SQL (trimmed), or None if no query found.
+    """
+    patterns = [
+        # 1) SQLQuery: ```sql ...```
+        r"SQLQuery:\s*```sql\s*(?P<sql>[\s\S]+?)```",
+        # 2) ```sql ...```
+        r"```sql\s*(?P<sql>[\s\S]+?)```",
+        # 3) ``` … ``` containing SELECT
+        r"```(?:[\s\S]*?)\s*(?P<sql>SELECT[\s\S]+?)```",
+        # 4) SQLQuery: … (grab until a blank line or end)
+        r"SQLQuery:\s*(?P<sql>[\s\S]+?)(?=\n\s*\n|$)",
+        # 5) Bare SELECT …; up to semicolon
+        r"(?P<sql>SELECT[\s\S]+?;)(?=\s|$)",
+    ]
+
+    for pat in patterns:
+        m = re.search(pat, text, re.IGNORECASE)
+        if m:
+            sql = m.group("sql").strip()
+            # strip any wrapping quotes
+            if (sql.startswith(("'", '"')) and sql.endswith(("'", '"'))):
+                sql = sql[1:-1].strip()
+            return sql
+
+    return None
         
-def extract_python_code(text):
-    python_code_match = re.search(r'```python(.*?)```', text, re.DOTALL)
-    if python_code_match:
-        python_code = python_code_match.group(1).strip()
-        return python_code
-    else:
-        python_code_match = re.search(r"python(.*?)'", text, re.DOTALL)
-        if python_code_match:
-            python_code = python_code_match.group(1).strip()
-            return python_code
-        else:
-            return None
+def extract_python_code(text: str):
+    """
+    Extracts Python code from a block of text. Handles:
+      1) ```python ... ``` fences
+      2) ``` ... ``` fences containing Python constructs
+      3) Bare 'def' or 'import' blocks up to a blank line
+    Returns the code (trimmed), or None if no code found.
+    """
+    patterns = [
+        # 1) ```python ... ```
+        r"```python\s*(?P<code>[\s\S]+?)```",
+        # 2) ``` ... ``` containing a Python keyword
+        r"```(?:[\s\S]*?)\s*(?P<code>(?:def |import |class )[\s\S]+?)```",
+        # 3) Bare def/import/class up to the next blank line or end
+        r"(?P<code>(?:def |import |class )[\s\S]+?)(?=\n\s*\n|$)",
+    ]
+    
+    for pat in patterns:
+        m = re.search(pat, text, re.IGNORECASE)
+        if m:
+            sql = m.group("sql").strip()
+            # strip any wrapping quotes
+            if (sql.startswith(("'", '"')) and sql.endswith(("'", '"'))):
+                sql = sql[1:-1].strip()
+            return sql
+
+    return None
 
 class SQLOutputParser(BaseOutputParser):
     def parse(self, text: str):

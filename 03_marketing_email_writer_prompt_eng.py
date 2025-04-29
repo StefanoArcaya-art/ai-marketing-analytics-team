@@ -8,7 +8,7 @@
 
 from marketing_analytics_team.agents.marketing_email_writer_agent import make_marketing_email_writer_agent
 
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, AIMessage
 
 import pandas as pd
 
@@ -39,16 +39,40 @@ marketing_agent.get_input_jsonschema()['properties']
 
 # * TESTS
 
-# TEST: Email with structured output
+# * TEST: Email with structured output
 
 messages = [
     HumanMessage("Write a marketing email to customers who have not purchased 'Learning Labs Pro - Paid Course'")
 ]
 result = marketing_agent.invoke({"messages": messages})
 
-result
+list(result.keys())
 
 Markdown(result['response'][0].content)
+
+result['email_subject']
+
+Markdown(result['email_body'])
+
+result['email_list']
+
+# * TEST: Business Intelligence Agent includes email list
+
+messages = [
+    HumanMessage("Write a marketing email to customers who have not purchased 'Learning Labs Pro - Paid Course'"),
+    AIMessage("The email list is: ['james_simons@rentech.com', 'bill_nye@scienceguy.com']", role="business_intelligence_agent")
+]
+result = marketing_agent.invoke({"messages": messages})
+
+list(result.keys())
+
+Markdown(result['response'][0].content)
+
+result['email_subject']
+
+Markdown(result['email_body'])
+
+result['email_list']
 
 # * TEST: No email requested
 

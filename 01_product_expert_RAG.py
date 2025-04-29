@@ -221,7 +221,7 @@ product_expert_agent
 
 # display(Image(product_expert_agent.get_graph().draw_png()))
 
-product_expert_agent.get_input_jsonschema()
+product_expert_agent.get_input_jsonschema()['properties']
 
 
 
@@ -233,7 +233,7 @@ messages = [
 
 result = product_expert_agent.invoke({"messages": messages})
 
-pprint(result['response'])
+result['response']
 
 Markdown(result['response'][0].content)
 

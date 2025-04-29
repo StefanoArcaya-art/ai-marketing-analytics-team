@@ -54,6 +54,8 @@ def make_marketing_email_writer_agent(model, temperature=0):
         
         IMPORTANT: Make sure to explain why the product you are recommending will help them address their goal.
         
+        EMAIL LIST: Generally this will come from a Business Intelligence Agent. Do NOT make up email addresses. Just return an empty list [] if you don't know.
+        
         RETURN FORMAT:
         Output must be a strict JSON object. Do NOT include comments or trailing commas. 
         Do NOT explain anything outside the JSON block.
@@ -62,7 +64,7 @@ def make_marketing_email_writer_agent(model, temperature=0):
         {{
             "general_response": "Your general response to the user question"
             "email_required": true,
-            "email_list": ["list_of_target_emails"],
+            "email_list": ["list_of_target_emails"] or [] (if you were not provided with email addresses via the Business Intelligence Agent),
             "email_subject": "Your compelling email subject",
             "email_body": "Your detailed email body content",            
         }}
@@ -77,6 +79,7 @@ def make_marketing_email_writer_agent(model, temperature=0):
         }}
 
         INITIAL_USER_QUESTION: {initial_question}
+        
         CONTEXT: {chat_history}
         """,
         input_variables=["initial_question", "chat_history"]

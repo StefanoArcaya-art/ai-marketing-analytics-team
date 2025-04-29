@@ -53,17 +53,14 @@ messages = [
 
 result = business_intelligence_agent.invoke({"messages": messages})
 
-result
+list(result.keys())
 
+# Summary
 Markdown(result['response'][0].content)
 
-
-# Additional kwargs keys
-result['messages'][0].additional_kwargs.keys()
-
 # SQL Query
-pprint(result['messages'][0].additional_kwargs['sql_query'])
+pprint(result['sql_query'])
 
 # Data
-pd.DataFrame(result['messages'][0].additional_kwargs['data'])
+pd.DataFrame(result['data'])
 
