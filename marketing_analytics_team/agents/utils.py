@@ -78,11 +78,11 @@ def extract_python_code(text: str):
     for pat in patterns:
         m = re.search(pat, text, re.IGNORECASE)
         if m:
-            sql = m.group("sql").strip()
+            code = m.group("code").strip()
             # strip any wrapping quotes
-            if (sql.startswith(("'", '"')) and sql.endswith(("'", '"'))):
-                sql = sql[1:-1].strip()
-            return sql
+            if (code.startswith(("'", '"')) and code.endswith(("'", '"'))):
+                code = code[1:-1].strip()
+            return code
 
     return None
 

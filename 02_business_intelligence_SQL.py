@@ -23,7 +23,7 @@ from IPython.display import Markdown
 from IPython.display import display, Image
 
 # Key Inputs
-MODEL = 'gpt-4.1-nano'
+MODEL = 'gpt-4.1-mini'
 PATH_CRM_DATABASE = "sqlite:///data/database-sql-transactions/leads_scored.db"
 
 os.environ["OPENAI_API_KEY"] = yaml.safe_load(open('../credentials.yml'))['openai']
@@ -64,3 +64,22 @@ pprint(result['sql_query'])
 # Data
 pd.DataFrame(result['data'])
 
+
+
+# * TEST: What is the average P1 probability of purchase by member rating? Return a scatter chart with the results.
+messages = [
+    HumanMessage("What is the average P1 probability of purchase by member rating? Return a scatter chart with the results.")
+]
+
+result = business_intelligence_agent.invoke({"messages": messages})
+
+list(result.keys())
+
+# Summary
+Markdown(result['response'][0].content)
+# SQL Query
+
+result['chart_plotly_json']
+
+import plotly.io as pio
+pio.from_json(result['chart_plotly_json'])
