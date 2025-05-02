@@ -136,7 +136,7 @@ def display_chat_history():
                     with tabs[2]:
                         if detail.get("chart_json"):
                             fig = pio.from_json(detail["chart_json"])
-                            st.plotly_chart(fig)
+                            st.plotly_chart(fig, key=f"plot_data_{i}")
                         elif detail.get("data") is not None:
                             df = pd.DataFrame(detail["data"])
                             st.dataframe(df)
