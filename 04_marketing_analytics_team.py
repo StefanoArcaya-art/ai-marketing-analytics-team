@@ -436,3 +436,10 @@ result = marketing_analytics_team.invoke(
 )
 
 result
+
+result["messages"]
+
+Markdown(result["messages"][-1].content)
+
+result['email_list']
+

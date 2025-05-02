@@ -32,7 +32,7 @@ from IPython.display import Markdown
 from IPython.display import display, Image
 
 # Key Inputs
-MODEL = 'gpt-4.1-nano'
+MODEL = 'gpt-4.1-mini'
 EMBEDDING = 'text-embedding-ada-002'
 PATH_VECTORDB = "data/data-rag-product-information/products_clean.db"
 
@@ -77,6 +77,7 @@ len(documents[1].page_content)
 
 documents = joblib.load("data/data-rag-product-information/products.pkl")
 
+documents[1].page_content
 
 # * Clean the Beautiful Soup Page Content
 
@@ -123,6 +124,8 @@ for document in documents_clean:
 documents_clean
 
 len(documents_clean)
+
+pprint(documents_clean[0].page_content)
 
 # Assess Length
 
@@ -185,7 +188,6 @@ Markdown(response.content)
 
 # * RAG Chain
 
-
 rag_chain_1 = (
     {"context": retriever_1, "question": RunnablePassthrough()}
     | prompt
@@ -198,6 +200,9 @@ result = rag_chain_1.invoke("Is the 4-Course R-Track Open for Enrollment?")
 Markdown(result)
 
 
+result = rag_chain_1.invoke("What is the 4-Course R-Track price?")
+
+Markdown(result)
 
 
 # * STEP 2: MAKE THE RAG AGENT
@@ -233,6 +238,8 @@ messages = [
 
 result = product_expert_agent.invoke({"messages": messages})
 
+result.keys()
+
 result['response']
 
 Markdown(result['response'][0].content)
@@ -246,7 +253,7 @@ messages = [
 
 result = product_expert_agent.invoke({"messages": messages})
 
-Markdown(result['messages'][0].content)
+Markdown(result['response'][0].content)
 
 
 # * TEST: How long will it take to complete the 5-Course R-Track?

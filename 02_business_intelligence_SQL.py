@@ -77,8 +77,11 @@ list(result.keys())
 
 # Summary
 Markdown(result['response'][0].content)
-# SQL Query
 
+# SQL Query
+pprint(result['sql_query'])
+
+# Plotly Chart
 result['chart_plotly_json']
 
 import plotly.io as pio
