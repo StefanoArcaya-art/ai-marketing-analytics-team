@@ -7,6 +7,8 @@ import sqlite3
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 
+N_CLUSTERS = 5
+
 # Connect to SQLite database
 conn = sqlite3.connect("challenges/data/database-sql-transactions/leads_scored_segmentation.db")
 
@@ -36,7 +38,7 @@ scaler = StandardScaler()
 X_scaled = scaler.fit_transform(X)
 
 # Apply K-Means clustering
-kmeans = KMeans(n_clusters=3, random_state=42)
+kmeans = KMeans(n_clusters=N_CLUSTERS, random_state=42)
 customer_features["segment"] = kmeans.fit_predict(X_scaled)
 
 # Merge segment back to leads_scored

@@ -32,7 +32,8 @@ def make_segment_analysis_agent(model, db_path, temperature=0):
 
         The segments are precomputed with numeric IDs (e.g., 0, 1, 2). Your task is to:
         1. Generate descriptive labels for each segment based on their statistics.
-        2. Provide insights into patterns across segments.
+        2. Provide insights into patterns across segments. Call this section "Segment Insights".
+        3. Suggest detailed marketing implications and campaign strategies for the different segments based on their attributes. Call this section "Marketing Implications".
 
         Metrics provided:
         - avg_p1: Lead score (0 to 1, higher means more likely to purchase).
@@ -45,9 +46,15 @@ def make_segment_analysis_agent(model, db_path, temperature=0):
         2. A dictionary mapping segment IDs to descriptive labels (e.g., {{"0": "High-Value Customers"}}).
         3. Detailed insights explaining patterns and marketing implications.
         4. A summary table of segment statistics in markdown format, using the generated labels.
+        
+        In the general response, include:
+        - A summary of the analysis.
+        - Provide insights into patterns across segments. Call this section "Segment Insights".
+        - Suggest campaign strategies for the different segments. Title this as "Marketing Implications".
+        - Use bullets and tables to make the response clear and easy to read.
 
         RETURN FORMAT:
-        A strict JSON object:
+        A strict JSON object (check to make sure it is valid JSON) with the following:
         - If analysis is requested:
         {{
             "general_response": "Summary of the analysis",
