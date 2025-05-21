@@ -265,7 +265,7 @@ if __name__ == "__main__":
     )
 
     # Test: Segment Analysis
-    messages = [HumanMessage(content="Can you analyze the customer segments and provide insights?")]
+    messages = [HumanMessage(content="Can you analyze the customer segments and provide insights from the Segmentation Agent?")]
     result = marketing_analytics_team.invoke(
         input={"messages": messages},
         config={

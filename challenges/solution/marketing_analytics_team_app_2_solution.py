@@ -290,7 +290,7 @@ with st.expander("I'm a complete marketing analytics copilot that contains a tea
     st.markdown(
         """
         #### Business Intelligence
-        - What tables are in the SQL database?
+        - Have the Business Intelligence agent show what tables are in the SQL database. Do not engage other agents. 
         - What does the leads_scored table look like?
         - What are the top 10 customers by revenue?
         - Draw a bar chart of the top 10 customers by revenue.
@@ -304,9 +304,9 @@ with st.expander("I'm a complete marketing analytics copilot that contains a tea
         - Have the marketing email writer remove Kamryn Tremblay from the email list
         
         #### Segment Analysis Agent
-        - What are the segments in the leads_scored_segmentation table?
-        - Have the Business Intelligence Expert find the top 20 high value buyers from segment 2 (High-Value Frequent Buyers). Return the top 20 in that segment ranked by p1 lead score who have not purchased Learning Labs PRO product. Do not engage the Product Expert or Marketing Expert.
-        - Have the Product Expert collect information on the 5-Course R-Track for use with the Marketing Expert. Have the Marketing Expert write a compelling marketing email to the 20 high value buyers from the previous analysis. Don't engage the Business Intelligence Expert or the Segment Agent.
+        - What are the segments in the leads_scored table?
+        - Have the Business Intelligence Expert find the top 20 high value buyers from segment 2 (High-Value Customers). Return the top 20 in that segment ranked by p1 lead score who have not purchased Learning Labs PRO product. Do not engage the Product Expert or Marketing Expert.
+        - Have the Product Expert collect information on the Learning Labs PRO product for use with the Marketing Expert. Have the Marketing Expert write a compelling marketing email to the 20 high value buyers from the previous analysis. Don't engage the Business Intelligence Expert or the Segment Agent.
         """
     )
 

@@ -31,6 +31,8 @@ customer_features["purchase_frequency"] = customer_features["purchase_frequency"
 customer_features["member_rating"] = customer_features["member_rating"].fillna(customer_features["member_rating"].mean())
 customer_features["p1"] = customer_features["p1"].fillna(customer_features["p1"].mean())
 
+customer_features
+
 # Standardize features
 features = ["purchase_frequency", "p1", "member_rating"]
 X = customer_features[features]
@@ -41,10 +43,13 @@ X_scaled = scaler.fit_transform(X)
 kmeans = KMeans(n_clusters=N_CLUSTERS, random_state=42)
 customer_features["segment"] = kmeans.fit_predict(X_scaled)
 
-# Merge segment back to leads_scored
-leads_scored = leads_scored.merge(
-    customer_features[["user_email", "segment"]], on="user_email", how="left"
-)
+# Drop any column that starts with "segment"
+to_drop = leads_scored.filter(regex="^segment").columns
+leads_scored = leads_scored.drop(columns=to_drop, errors="ignore")
+
+# Merge new segments into leads_scored
+leads_scored["segment"] = customer_features["segment"]
+leads_scored
 
 # Fill any missing segments with 0 (default segment)
 leads_scored["segment"] = leads_scored["segment"].fillna(0).astype(int)
