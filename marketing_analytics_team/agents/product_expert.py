@@ -33,7 +33,9 @@ PATH_PRODUCTS_VECTORDB = "data/data-rag-product-information/products_clean.db"
 
 
 # * AGENT CREATION
-def make_product_expert_agent(model, model_embedding='text-embedding-ada-002', db_path=PATH_PRODUCTS_VECTORDB):
+def make_product_expert_agent(
+    model, model_embedding='text-embedding-ada-002', db_path=PATH_PRODUCTS_VECTORDB
+):
     """
     Create a Product Expert Agent that can answer questions about products.
     

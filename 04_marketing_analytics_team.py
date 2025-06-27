@@ -441,5 +441,9 @@ result["messages"]
 
 Markdown(result["messages"][-1].content)
 
+pprint(result["messages"][-1].content)
+
+pprint(result["messages"][-2].content)
+
 result['email_list']
 

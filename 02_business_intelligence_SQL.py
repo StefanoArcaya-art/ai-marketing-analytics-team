@@ -58,12 +58,15 @@ list(result.keys())
 # Summary
 Markdown(result['response'][0].content)
 
+pprint(result['response'][0].content)
+
 # SQL Query
 pprint(result['sql_query'])
 
 # Data
 pd.DataFrame(result['data'])
 
+dict(result['response'][0])['name']
 
 
 # * TEST: What is the average P1 probability of purchase by member rating? Return a scatter chart with the results.
@@ -77,6 +80,8 @@ list(result.keys())
 
 # Summary
 Markdown(result['response'][0].content)
+
+pprint(result['response'][0].content)
 
 # SQL Query
 pprint(result['sql_query'])

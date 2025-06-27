@@ -50,6 +50,8 @@ list(result.keys())
 
 Markdown(result['response'][0].content)
 
+pprint(result['response'][0].content)
+
 result['email_subject']
 
 Markdown(result['email_body'])
@@ -67,6 +69,8 @@ result = marketing_agent.invoke({"messages": messages})
 list(result.keys())
 
 Markdown(result['response'][0].content)
+
+pprint(result['response'][0].content)
 
 result['email_subject']
 

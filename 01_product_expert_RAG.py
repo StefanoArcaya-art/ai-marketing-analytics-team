@@ -125,7 +125,7 @@ documents_clean
 
 len(documents_clean)
 
-pprint(documents_clean[0].page_content)
+pprint(documents_clean[1].page_content)
 
 # Assess Length
 
@@ -184,7 +184,7 @@ model = ChatOpenAI(
 
 response = model.invoke("What is the 4-Course R-Track?")
 
-Markdown(response.content)
+pprint(response.content)
 
 # * RAG Chain
 
@@ -199,11 +199,14 @@ result = rag_chain_1.invoke("Is the 4-Course R-Track Open for Enrollment?")
 
 Markdown(result)
 
+pprint(result)
+
 
 result = rag_chain_1.invoke("What is the 4-Course R-Track price?")
 
 Markdown(result)
 
+pprint(result)
 
 # * STEP 2: MAKE THE RAG AGENT
 #  - Create a RAG Agent based on the one used in Clinic #1
@@ -244,6 +247,8 @@ result['response']
 
 Markdown(result['response'][0].content)
 
+pprint(result['response'][0].content)
+
 
 # * TEST: How long will it take to complete the 5-Course R-Track?
 
@@ -255,6 +260,7 @@ result = product_expert_agent.invoke({"messages": messages})
 
 Markdown(result['response'][0].content)
 
+pprint(result['response'][0].content)
 
 # * TEST: How long will it take to complete the 5-Course R-Track?
 

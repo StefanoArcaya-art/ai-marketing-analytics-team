@@ -236,6 +236,8 @@ if __name__ == "__main__":
     
     Markdown(results['response'][0].content)
     
+    pprint(results['response'][0].content)
+    
     # Display the chart
     import plotly.io as pio
     fig = pio.from_json(results['chart_json'])
