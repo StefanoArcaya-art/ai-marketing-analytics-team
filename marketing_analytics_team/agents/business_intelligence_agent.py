@@ -15,8 +15,6 @@ from langgraph.graph import StateGraph, END
 
 from langchain_openai import ChatOpenAI
 
-from typing import TypedDict
-
 import pandas as pd
 import sqlalchemy as sql
 import plotly.io as pio
