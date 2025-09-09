@@ -71,7 +71,7 @@ from langchain_community.chat_message_histories import StreamlitChatMessageHisto
 
 PATH_PRODUCTS_VECTORDB = "data/data-rag-product-information/products_clean.db"
 
-PATH_TRANSACTIONS_DATABASE = "sqlite:///data/database-sql-transactions/leads_scored.db"
+PATH_TRANSACTIONS_DATABASE = "sqlite:///data/database-sql-transactions/leads_scored_segmentation.db"
 
 
 # * AI SETUP

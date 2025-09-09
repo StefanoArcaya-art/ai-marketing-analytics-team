@@ -5,6 +5,7 @@ import re
 
 
 # * Helper functions to get last question that the Human asked
+
 def get_last_human_message(msgs):
     # Iterate through the list in reverse order
     for msg in reversed(msgs):

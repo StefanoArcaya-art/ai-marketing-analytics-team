@@ -20,7 +20,7 @@ import yaml
 from marketing_analytics_team.agents.marketing_email_writer_agent import make_marketing_email_writer_agent
 from marketing_analytics_team.agents.product_expert import make_product_expert_agent
 from marketing_analytics_team.agents.business_intelligence_agent import make_business_intelligence_agent
-from marketing_analytics_team.agents.segment_analysis_agent import make_segment_analysis_agent
+from marketing_analytics_team.agents.customer_segmentation_agent import make_segment_analysis_agent
 
 def make_marketing_analytics_team_2(model, model_embedding, path_products_vector_db, path_transactions_sql_db, checkpointer):
     # API Keys

@@ -51,7 +51,7 @@ llm = OPENAI_LLM
 
 # SQL DATABASE SETUP
 
-PATH_DB = "sqlite:///data/database-sql-transactions/leads_scored.db"
+PATH_DB = "sqlite:///data/database-sql-transactions/leads_scored_segmentation.db"
 
 sql_engine = sql.create_engine(PATH_DB)
 
