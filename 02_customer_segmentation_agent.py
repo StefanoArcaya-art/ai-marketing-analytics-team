@@ -3,323 +3,387 @@
 # MULTI-AGENTS (AGENTIAL SUPERVISION)
 # ***
 
-# GOAL: Make a customer segmentation AI agent based similar to the approach used in Clinic #2 for the Lead Scoring (Business Intelligence Expert).
+# GOAL: Make a segment-aware recommender AI agent that:
+# - Recomputes segment → top-K product affinities from the database
+# - Chooses the "next product" for each segment (top-ranked by purchases, tie-break on revenue proxy)
+# - Returns a readable report with recommendations by segment + concise affinity notes
+# - OPTIONAL: The agent can ALSO return a user-level target list (e.g., "recommend the next product for top 30 users in segment 2")
 
-# The agent analyzes precomputed customer segments in the database, generating descriptive labels and insights based on lead scores, engagement ratings, and purchase frequency.
-
-# * PART 2: CUSTOMER SEGMENTATION AGENT
+# * PART 2: SEGMENT RECOMMENDER AGENT 
 
 # AGENTS
 from langchain_openai import ChatOpenAI
 from langchain.prompts import PromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.messages import BaseMessage, AIMessage, HumanMessage
-from langchain_core.runnables.graph import MermaidDrawMethod
 from langgraph.graph import StateGraph, START, END
 from typing import Sequence, TypedDict
 import os
 import yaml
+import json
+import re
 
-# DATA SCEINCE
+# DATA SCIENCE
 import pandas as pd
 from sqlalchemy import create_engine
-import plotly.express as px
-import plotly.io as pio
 
 # DEBUGGING
 from pprint import pprint
-from IPython.display import Markdown, Image, display
+from IPython.display import Markdown, display
 
-# CUSTOM
+# CUSTOM (helper to fetch last human question, if available)
 from marketing_analytics_team.agents.utils import get_last_human_message
 
+
+# --------------------
 # SETUP
+# --------------------
 
 db_path = "sqlite:///data/database-sql-transactions/leads_scored_segmentation.db"
-model = "gpt-4.1-mini"  
+model = "gpt-4.1-mini"
 
 os.environ["OPENAI_API_KEY"] = yaml.safe_load(open('../credentials.yml'))['openai']
+llm = ChatOpenAI(model=model, temperature=0)
 
-llm = ChatOpenAI(model=model)
-
-# * 2.1 TESTING THE LLM
-
-response = llm.invoke("What's the receipe for a margarita?")
-
-response
-
-pprint(response.content)
-
-Markdown(response.content) # Just like chatgpt!
+# Key Inputs for affinity computation:
+LOOKBACK_DAYS = 365
+TOPK_PER_SEGMENT = 3
 
 
-# * 2.2 MAKING THE CUSTOM AGENTS - CUSTOMER SEGMENTATION AGENT
+# --------------------
+# * 2.1 MAKING THE CUSTOM AGENT - SEGMENT RECOMMENDER
+# --------------------
 
-# Segment Analysis Prompt
-segment_analysis_prompt = PromptTemplate(
+# Recommender Agent Prompt (no bare curly braces that confuse PromptTemplate)
+segment_recommender_prompt = PromptTemplate(
     template="""
-    You are an expert in marketing analytics for Business Science, a premium data science educational platform.
-    Analyze the user's request to determine if it requires analyzing customer segments from the database.
+    You are an expert marketing analyst for Business Science (a premium data-science education platform).
+    Based on segment-level product affinities and a proposed deterministic recommendation, generate a concise
+    business-facing summary and a markdown table of the recommended "next product" per segment.
 
-    The segments are precomputed with numeric IDs (e.g., 0, 1, 2). Your task is to:
-    1. Generate descriptive labels for each segment based on their statistics.
-    2. Provide insights into patterns across segments. Call this section "Segment Insights".
-    3. Suggest detailed marketing implications and campaign strategies for the different segments based on their attributes. Call this section "Marketing Implications".
+    INPUTS:
+    - SEGMENT_AFFINITIES: a JSON list of records with fields:
+      segment, product_id, product_name, purchase_count, revenue_proxy, rank_in_segment
+      Each segment has up to K rows, sorted best-to-worst (rank_in_segment = 1 is strongest).
+    - PROPOSED_RECOMMENDATIONS: JSON mapping of segment to an object with fields:
+      "product_id", "product_name", and "rationale" that we have preselected.
 
-    Metrics provided:
-    - avg_p1: Lead score (0 to 1, higher means more likely to purchase).
-    - avg_member_rating: Engagement rating (1 to 5, higher means more engaged).
-    - avg_purchase_frequency: Average number of transactions per customer.
-    - customer_count: Number of customers in the segment.
+    YOUR TASK:
+    1) Produce a short "General Response" explaining the logic used (top purchases last 12 months, ties by revenue).
+    2) Return a markdown table named "Next Product by Segment" with columns:
+       segment, product_name, product_id, rationale
+    3) Provide a compact "Affinity Notes" section with 1–2 bullets per segment summarizing the top options (K ≤ 3).
 
-    If segment analysis is requested, provide:
-    1. A general response summarizing the analysis.
-    2. A dictionary mapping segment IDs to descriptive labels (e.g., {{"0": "High-Value Customers"}}).
-    3. Detailed insights explaining patterns and marketing implications.
-    4. A summary table of segment statistics in markdown format, using the generated labels.
-    
-    In the general response, include:
-    - A summary of the analysis.
-    - Provide insights into patterns across segments. Call this section "Segment Insights".
-    - Suggest campaign strategies for the different segments. Title this as "Marketing Implications".
-    - Use bullets and tables to make the response clear and easy to read.
-
-    RETURN FORMAT:
-    A strict JSON object (check to make sure it is valid JSON) with the following:
-    - If analysis is requested:
+    RETURN STRICT JSON with fields:
     {{
-        "general_response": "Summary of the analysis",
-        "analysis_required": true,
-        "segment_labels": {{ "0": "Label for segment 0", "1": "Label for segment 1", "2": "Label for segment 2" }},
-        "insights": "Detailed explanation of patterns and marketing implications",
-        "summary_table": "Markdown table with segment_name (use generated labels), avg_p1, avg_member_rating, avg_purchase_frequency, customer_count"
-    }}
-    - If no analysis is required:
-    {{
-        "general_response": "Response indicating no segment analysis needed",
-        "analysis_required": false,
-        "segment_labels": {{}},
-        "insights": "",
-        "summary_table": ""
+        "general_response": "1-2 paragraph summary of the overall recommendation approach.",
+        "next_products_table": "Markdown table (segment | product_name | product_id | rationale)",
+        "affinity_notes": "Markdown bullets summarizing key affinities by segment (short)."
     }}
 
-    INITIAL_USER_QUESTION: {initial_question}
-    CONTEXT: {chat_history}
-    SEGMENT_STATISTICS: {segment_statistics}
+    SEGMENT_AFFINITIES: {segment_affinities}
+    PROPOSED_RECOMMENDATIONS: {proposed_recommendations}
     """,
-    input_variables=["initial_question", "chat_history", "segment_statistics"]
+    input_variables=["segment_affinities", "proposed_recommendations"]
 )
 
-segment_analyzer = segment_analysis_prompt | llm | JsonOutputParser()
-
-result = segment_analyzer.invoke({
-    "initial_question": "Can you analyze the segments and provide insights?",
-    "chat_history": [],
-    "segment_statistics": '[{"segment": 0, "avg_p1": 0.8, "avg_member_rating": 4.5, "avg_purchase_frequency": 2.5, "customer_count": 100}]'})
-
-list(result.keys())
-
-Markdown(result.get("general_response"))
-
-Markdown(result.get("summary_table"))
+segment_recommender_parser = segment_recommender_prompt | llm | JsonOutputParser()
 
 # Graph State
 class GraphState(TypedDict):
     messages: Sequence[BaseMessage]
     response: Sequence[BaseMessage]
-    insights: str
-    summary_table: str
-    analysis_required: bool
-    segment_labels: dict
-    segmentation_data: dict
-    chart_json: str
+    recommendations_by_segment: dict
+    affinity_notes: str
+    next_products_table: str
+    sql_query: str
+    # NEW (Option B):
+    user_reco_list: list
+    user_table_markdown: str
 
-def segment_analysis_node(state: GraphState) -> GraphState:
-    print("---SEGMENT ANALYSIS AGENT---")
 
-    # Connect to database
+def segment_recommender_node(state: GraphState) -> GraphState:
+    print("---SEGMENT RECOMMENDER AGENT---")
+
+    # ---------- SAFETY DEFAULTS (prevents UnboundLocalError) ----------
+    user_reco_list: list = []
+    user_table_markdown: str = ""
+    general_response = ""
+    next_products_table = ""
+    affinity_notes = ""
+
+    # --------------------
+    # 1) Connect to database & load tables
+    # --------------------
     engine = create_engine(db_path)
     conn = engine.connect()
-    
+
     leads_query = """
-    SELECT user_email, p1, member_rating, segment
+    SELECT user_email, user_full_name, p1, segment, made_purchase
     FROM leads_scored
     """
-    
     transactions_query = """
-    SELECT user_email, purchased_at
+    SELECT transaction_id, purchased_at, user_email, product_id
     FROM transactions
     """
-    
+    products_query = """
+    SELECT product_id, description AS product_name, suggested_price
+    FROM products
+    """
+
     df_leads = pd.read_sql(leads_query, conn)
-    df_transactions = pd.read_sql(transactions_query, conn)
+    df_txn   = pd.read_sql(transactions_query, conn)
+    df_prod  = pd.read_sql(products_query, conn)
     conn.close()
 
-    # Calculate purchase frequency
-    purchase_freq = df_transactions.groupby("user_email").size().reset_index(name="purchase_frequency")
+    # --------------------
+    # 2) Lookback filter (robust to mixed dtypes)
+    # --------------------
+    if "purchased_at" in df_txn.columns:
+        df_txn["purchased_at"] = pd.to_datetime(df_txn["purchased_at"], errors="coerce")
+        if df_txn["purchased_at"].notna().any():
+            cutoff = df_txn["purchased_at"].max() - pd.Timedelta(days=LOOKBACK_DAYS)
+            df_txn = df_txn[df_txn["purchased_at"] >= cutoff]
 
-    # Merge data
-    df_analysis = df_leads.merge(purchase_freq, on="user_email", how="left")
-    df_analysis["purchase_frequency"] = df_analysis["purchase_frequency"].fillna(0)
+    # --------------------
+    # 3) Build segment → top-K product affinities (same logic as Part 1)
+    # --------------------
+    df_txn_seg = df_txn.merge(df_leads[["user_email", "segment"]], on="user_email", how="left")
+    df_txn_seg["segment"] = df_txn_seg["segment"].fillna(0).astype(int)
 
-    # Compute summary statistics
-    df_summary = df_analysis.groupby("segment").agg({
-        "p1": "mean",
-        "member_rating": "mean",
-        "purchase_frequency": "mean",
-        "user_email": "count"
-    }).rename(columns={"user_email": "customer_count"}).reset_index()
-
-    # Round metrics for display
-    df_summary["avg_p1"] = df_summary["p1"].round(3)
-    df_summary["avg_member_rating"] = df_summary["member_rating"].round(2)
-    df_summary["avg_purchase_frequency"] = df_summary["purchase_frequency"].round(2)
-
-    # Prepare segment statistics for LLM
-    segment_stats_json = df_summary[["segment", "avg_p1", "avg_member_rating", "avg_purchase_frequency", "customer_count"]].to_json(orient="records")
-    print("Segment Statistics JSON:", segment_stats_json)
-
-    # Invoke LLM for labels and insights
-    messages = state.get("messages")
-    last_question = get_last_human_message(messages)
-    last_question = last_question.content if last_question else ""
-    result = segment_analyzer.invoke({
-        "initial_question": last_question,
-        "chat_history": messages,
-        "segment_statistics": segment_stats_json
-    })
-    print("LLM Result:", result)
-
-    # Validate and apply LLM-generated labels
-    default_labels = {str(i): f"Segment {i}" for i in df_summary["segment"]}
-    segment_labels = result.get("segment_labels", default_labels)
-    
-    # Ensure segment IDs are strings and validate labels
-    segment_labels = {str(k): v for k, v in segment_labels.items() if isinstance(v, str) and v}
-    if not all(str(seg) in segment_labels for seg in df_summary["segment"]):
-        print("Warning: Missing labels for some segments. Using defaults.")
-        segment_labels = default_labels
-
-    # Apply labels
-    df_summary["segment_name"] = df_summary["segment"].astype(str).map(segment_labels)
-
-    # Create summary table with LLM-generated labels
-    if result["analysis_required"]:
-        summary_table = df_summary[["segment_name", "segment", "avg_p1", "avg_member_rating", "avg_purchase_frequency", "customer_count"]].to_markdown(index=False)
-        # Update result with the correct summary table
-        result["summary_table"] = summary_table
-    else:
-        summary_table = ""
-
-    # Create Plotly bar chart
-    df_viz = df_summary.melt(
-        id_vars=["segment_name"],
-        value_vars=["avg_p1", "avg_member_rating", "avg_purchase_frequency"],
-        var_name="metric",
-        value_name="value"
+    df_txn_seg = df_txn_seg.merge(
+        df_prod[["product_id", "product_name", "suggested_price"]],
+        on="product_id",
+        how="left"
     )
-    
-    fig = px.bar(
-        df_viz,
-        x="segment_name",
-        y="value",
-        color="metric",
-        barmode="group",
-        title="Segment Analysis: Lead Score, Member Rating, and Purchase Frequency",
-        labels={"segment_name": "Segment", "value": "Average Value", "metric": "Metric"}
-    )
-    
-    chart_json = fig.to_json()
+    df_txn_seg["product_name"] = df_txn_seg["product_name"].fillna(df_txn_seg["product_id"].astype(str))
+    df_txn_seg["suggested_price"] = df_txn_seg["suggested_price"].fillna(0.0)
 
-    # Format response
-    if result["analysis_required"]:
-        formatted_response = (
-            f"**General Response**: {result['general_response']}\n\n"
-            f"**Insights**: {result['insights']}\n\n"
-            f"**Summary Table**:\n{result['summary_table']}"
+    agg = (
+        df_txn_seg
+        .groupby(["segment", "product_id", "product_name"], as_index=False)
+        .agg(
+            purchase_count=("transaction_id","count"),
+            revenue_proxy=("suggested_price","sum")
         )
-    else:
-        formatted_response = (
-            f"**General Response**: {result['general_response']}\n\n"
-            "No segment analysis required."
+    )
+    agg = agg.sort_values(["segment","purchase_count","revenue_proxy"], ascending=[True,False,False])
+    agg["rank_in_segment"] = agg.groupby("segment").cumcount() + 1
+    topk = agg[agg["rank_in_segment"] <= TOPK_PER_SEGMENT].copy()
+
+    # Prepare JSON-friendly affinities for the LLM
+    affinities_records = topk[["segment","product_id","product_name","purchase_count","revenue_proxy","rank_in_segment"]] \
+        .to_dict(orient="records")
+    affinities_json = json.dumps(affinities_records)
+
+    # --------------------
+    # 4) Deterministic "next product" per segment (rank 1)
+    # --------------------
+    recommendations_by_segment = {}
+    for seg, g in topk.groupby("segment"):
+        g = g.sort_values(["rank_in_segment"])
+        top_row = g.iloc[0]
+        recommendations_by_segment[str(int(seg))] = {
+            "product_id": float(top_row["product_id"]) if pd.notna(top_row["product_id"]) else None,
+            "product_name": str(top_row["product_name"]),
+            "rationale": "Top purchase_count in last 12 months; tie-broken by revenue_proxy."
+        }
+    recos_json = json.dumps(recommendations_by_segment)
+
+    # --------------------
+    # 5) Ask LLM to produce a concise report (using our deterministic picks)
+    # --------------------
+    try:
+        llm_out = segment_recommender_parser.invoke({
+            "segment_affinities": affinities_json,
+            "proposed_recommendations": recos_json
+        })
+        general_response = llm_out.get("general_response","")
+        next_products_table = llm_out.get("next_products_table","")
+        affinity_notes = llm_out.get("affinity_notes","")
+    except Exception as e:
+        print("LLM formatting warning:", e)
+        # Safe fallbacks
+        rows = []
+        for seg, rec in recommendations_by_segment.items():
+            rows.append((seg, rec["product_name"], int(rec["product_id"]) if rec["product_id"] is not None else "NA", rec["rationale"]))
+        df_table = pd.DataFrame(rows, columns=["segment","product_name","product_id","rationale"])
+        next_products_table = df_table.to_markdown(index=False)
+        affinity_notes = "- Affinity notes unavailable due to LLM formatting error."
+        general_response = (
+            "Recommended the top product per segment based on purchase frequency within the last 12 months "
+            "(ties broken by revenue proxy)."
+        )
+
+    # --------------------
+    # 6) OPTIONAL: Build a user-level target list when the prompt requests it
+    #     e.g., "top 30 users in segment 2", supports "non-buyer(s)" and "ignore purchase history"
+    # --------------------
+    last_msg = get_last_human_message(state.get("messages", []))
+    last_text = ((last_msg.content if last_msg else "") or "").lower()
+
+    seg_match = re.search(r"(?:segment|seg)\s*[:#]?\s*(\d+)", last_text)
+    # support "top 30", "top-30", "top30", or "<n> users"
+    top_match = re.search(r"top\s*[- ]?(\d+)", last_text) or re.search(r"\b(\d+)\s+users?\b", last_text)
+    non_buyers_only = bool(re.search(r"non[- ]?buyer", last_text))
+    ignore_history = bool(
+        re.search(r"ignore\s+(?:purchase|buy)\s+history", last_text)
+        or "include previous buyers" in last_text
+        or "all users" in last_text
+    )
+
+    if seg_match and top_match:
+        target_seg = int(seg_match.group(1))
+        top_n = int(top_match.group(1))
+
+        # Per-segment ranked products (top-K)
+        topk_by_segment = {
+            int(seg): g.sort_values("rank_in_segment")[["product_id", "product_name"]]
+                        .to_dict(orient="records")
+            for seg, g in topk.groupby("segment")
+        }
+        seg_products = topk_by_segment.get(target_seg, [])
+        pid_to_name = {int(p["product_id"]): p["product_name"] for p in seg_products if pd.notna(p["product_id"])}
+
+        # Purchases per user
+        purchases_by_user = (
+            df_txn.dropna(subset=["user_email"])
+                 .dropna(subset=["product_id"])
+                 .assign(product_id=lambda d: d["product_id"].astype(int))
+                 .groupby("user_email")["product_id"]
+                 .apply(set)
+                 .to_dict()
+        )
+
+        # Candidate pool
+        cands = df_leads[df_leads["segment"] == target_seg].copy()
+        if non_buyers_only:
+            cands = cands[cands["made_purchase"].fillna(0) == 0]
+        cands = cands.sort_values("p1", ascending=False).copy()
+
+        def next_eligible_product_for_user(email: str):
+            if not seg_products:
+                return None, None
+            if ignore_history:
+                pid = int(seg_products[0]["product_id"]) if pd.notna(seg_products[0]["product_id"]) else None
+                return pid, pid_to_name.get(pid)
+            already = purchases_by_user.get(email, set())
+            for item in seg_products:
+                pid = int(item["product_id"]) if pd.notna(item["product_id"]) else None
+                if pid is None:
+                    continue
+                if pid not in already:
+                    return pid, item["product_name"]
+            return None, None
+
+        for _, r in cands.iterrows():
+            if len(user_reco_list) >= top_n:
+                break
+            pid, pname = next_eligible_product_for_user(r["user_email"])
+            if pid is None:
+                continue
+            user_reco_list.append({
+                "user_email": r["user_email"],
+                "user_full_name": r.get("user_full_name", ""),
+                "p1": float(r["p1"]) if pd.notna(r["p1"]) else 0.0,
+                "segment": int(r["segment"]) if pd.notna(r["segment"]) else target_seg,
+                "product_id": pid,
+                "product_name": pname
+            })
+
+        if user_reco_list:
+            _df = pd.DataFrame(user_reco_list)[
+                ["user_full_name","user_email","p1","segment","product_name","product_id"]
+            ]
+            user_table_markdown = _df.to_markdown(index=False)
+
+    # --------------------
+    # 7) SQL provenance (for audit/debug)
+    # --------------------
+    sql_used = (
+        "SELECT user_email, user_full_name, p1, segment, made_purchase FROM leads_scored; "
+        "SELECT transaction_id, purchased_at, user_email, product_id FROM transactions; "
+        "SELECT product_id, description AS product_name, suggested_price FROM products;"
+    )
+
+    # --------------------
+    # 8) Assemble final response
+    # --------------------
+    formatted_response = (
+        f"**Segment Recommender Result**\n\n"
+        f"{general_response}\n\n"
+        f"### Next Product by Segment\n\n{next_products_table}\n\n"
+        f"### Affinity Notes\n\n{affinity_notes}"
+    )
+    if user_table_markdown:
+        formatted_response += (
+            f"\n\n### Target List\n"
+            f"_Returned by request parsed from your prompt (segment & top-N, plus optional non-buyer / history filters)._"
+            f"\n\n_Total users returned: **{len(user_reco_list)}**._\n\n{user_table_markdown}"
         )
 
     return {
-        # * NEW: Response is an AIMessage that returns the AI's reasoning
-        "response": [AIMessage(content=formatted_response, name="SegmentAnalysisAgent")],
-        
-        # Extra outputs for tracking and visualization
-        "insights": result.get("insights", ""),
-        "summary_table": result.get("summary_table", ""),
-        "analysis_required": result.get("analysis_required", False),
-        "segment_labels": segment_labels,
-        "segmentation_data": df_summary.to_dict(),
-        "chart_json": chart_json
+        "response": [AIMessage(content=formatted_response, name="SegmentRecommenderAgent")],
+        "recommendations_by_segment": recommendations_by_segment,
+        "affinity_notes": affinity_notes,
+        "next_products_table": next_products_table,
+        "sql_query": sql_used,
+        "user_reco_list": user_reco_list,
+        "user_table_markdown": user_table_markdown
     }
+
+
 
 # Create LangGraph workflow
 workflow = StateGraph(GraphState)
-
-workflow.add_node("segment_analyzer", segment_analysis_node)
-
-workflow.add_edge(START, "segment_analyzer")
-workflow.add_edge("segment_analyzer", END)
+workflow.add_node("segment_recommender", segment_recommender_node)
+workflow.add_edge(START, "segment_recommender")
+workflow.add_edge("segment_recommender", END)
 
 app = workflow.compile()
-
 app
 
-# Alternative graph visualization if Mermaid.INK is not available
-# display(Image(app.get_graph().draw_png()))
 
-# * 2.3 RUNNING THE SEGMENTATION AGENT
+# --------------------
+# * 2.2 RUNNING THE RECOMMENDER AGENT — EXAMPLES (Option B in action)
+# --------------------
 
-messages = [HumanMessage(content="Can you analyze the segments and provide insights?")]
+# EXAMPLE A: Segment-level "next product" report (no user list)
+messages = [HumanMessage(content="Recommend the next product by segment based on recent affinities.")]
 
 results = app.invoke({"messages": messages})
 
-list(results.keys())
+display(Markdown(results['response'][0].content))
 
-# Get the messages and response
-
-results['messages']
-
-results['response']
-
-# Display the AI message response
-Markdown(results['response'][0].content)
-
-# Display the chart
-fig = pio.from_json(results['chart_json'])
-fig
-
-# Display Summary Table
-Markdown(results['summary_table'])
-
-pd.DataFrame(results.get("segmentation_data"))
+results['recommendations_by_segment']  # raw mapping
 
 
-# * 2.4 MODULARIZE THE AGENT FOR THE MARKETING ANALYTICS TEAM
+# EXAMPLE B: Ask for a user-level list — "top 30 users in segment 2"
+# Default behavior: exclude products a user already owns and choose the first eligible from top-K
+messages = [HumanMessage(content="Recommend the next product by segment and give me the top 30 users in segment 2.")]
 
-from marketing_analytics_team.agents.customer_segmentation_agent import make_segment_analysis_agent
+results = app.invoke({"messages": messages})
 
-segment_analysis_agent = make_segment_analysis_agent(model=model, db_path=db_path)
-segment_analysis_agent
+display(Markdown(results['response'][0].content))
 
-segment_analysis_agent.get_input_jsonschema()['properties']
+results.get("user_reco_list", [])
 
-results = segment_analysis_agent.invoke({"messages": messages})
 
-list(results.keys())
+# EXAMPLE C: Same as B, but **non-buyers only**
+messages = [HumanMessage(content="For segment 2, provide the top 30 users by p1 (non-buyers only) and recommend the next product.")]
 
-results['response']
+results = app.invoke({"messages": messages})
 
-Markdown(results['response'][0].content)
+display(Markdown(results['response'][0].content))
 
-fig = pio.from_json(results['chart_json'])
-fig
+len(results.get("user_reco_list", []))
 
-# CONCLUSIONS
-# - We have created a Customer Segmentation Agent that analyzes precomputed customer segments from a database
-# - The agent generates descriptive labels, insights, and marketing implications based on lead scores, engagement ratings, and purchase frequency.
-# - This modular agent can be integrated into a larger marketing analytics system to provide actionable insights.
+
+# EXAMPLE D: Force a full Top-N even if most already purchased — **ignore purchase history**
+messages = [HumanMessage(content="Segment 2: give me the top 30 users by p1 and recommend the next product, ignore purchase history.")]
+
+results = app.invoke({"messages": messages})
+
+display(Markdown(results['response'][0].content))
+
+len(results.get("user_reco_list", []))
