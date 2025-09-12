@@ -82,6 +82,8 @@ pd.read_sql("SELECT * FROM leads_scored", conn)
 # Close connection
 conn.close()
 
+leads_scored["segment"].value_counts().sort_index()
+
 # * CONCLUSIONS
 # - We have NOT done any AI. 
 # - We have created customer segments using K-Means clustering based on purchase frequency, lead score (p1), and engagement rating (member_rating).

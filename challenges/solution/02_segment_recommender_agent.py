@@ -392,7 +392,7 @@ results['recommendations_by_segment']
 
 
 # Example B: Ask for a user-level list — "top 30 users in segment 2"
-messages = [HumanMessage(content="Recommend the next product by segment and give me the top 30 users in segment 2.")]
+messages = [HumanMessage(content="Give me the top 30 users in segment 2 and recommend their next purchase.")]
 results = app.invoke({"messages": messages})
 
 display(Markdown(results['response'][0].content))

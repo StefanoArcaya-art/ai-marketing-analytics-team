@@ -33,7 +33,7 @@ warnings.filterwarnings("ignore", category=pd.errors.SettingWithCopyWarning)
 # -- Constants & Config ------------------------------------------------------
 CHAT_LLM_OPTIONS = ["gpt-4.1-mini", "gpt-4.1", "gpt-4o-mini", "gpt-4o"]
 EMBEDDING_OPTIONS = ["text-embedding-ada-002"]
-PATH_TRANSACTIONS_DB = "sqlite:///challenges/data/database-sql-transactions/leads_scored_segmentation.db"
+PATH_TRANSACTIONS_DB = "sqlite:///data/database-sql-transactions/leads_scored_segmentation.db"
 PATH_PRODUCTS_VDB = "data/data-rag-product-information/products_clean.db"
 
 

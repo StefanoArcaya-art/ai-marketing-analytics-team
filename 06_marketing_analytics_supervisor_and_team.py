@@ -381,7 +381,7 @@ result = app.invoke(
     input = {"messages": messages},
     # * NEW: Add thread_id
     config = {
-        "recursion_limit": 10,
+        "recursion_limit": 10, # * VERY IMPORTANT TO AVOID INFINITE RECURSION
         "configurable": {"thread_id": "123"}
     },
 )
@@ -392,9 +392,9 @@ result["messages"]
 
 for message in result['messages']:
     if message.name:
-        pprint(message.name)
-    pprint(message.content)
-    
+        display(Markdown(message.name))
+    display(Markdown(message.content))
+
 # Getting State Elements
 
 pprint(result['sql_query'])
@@ -452,7 +452,7 @@ result = marketing_analytics_team.invoke(
     # * NEW: Add thread_id
     config = {
         "recursion_limit": 10,
-        "configurable": {"thread_id": "123"}
+        "configurable": {"thread_id": "124"}
     },
 )
 result['messages']

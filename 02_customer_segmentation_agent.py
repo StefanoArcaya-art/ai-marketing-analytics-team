@@ -115,7 +115,8 @@ segment_analyzer = segment_analysis_prompt | llm | JsonOutputParser()
 result = segment_analyzer.invoke({
     "initial_question": "Can you analyze the segments and provide insights?",
     "chat_history": [],
-    "segment_statistics": '[{"segment": 0, "avg_p1": 0.8, "avg_member_rating": 4.5, "avg_purchase_frequency": 2.5, "customer_count": 100}]'})
+    "segment_statistics": '[{"segment": 0, "avg_p1": 0.8, "avg_member_rating": 4.5, "avg_purchase_frequency": 2.5, "customer_count": 100}]'
+})
 
 list(result.keys())
 
@@ -123,10 +124,15 @@ Markdown(result.get("general_response"))
 
 Markdown(result.get("summary_table"))
 
+Markdown(result.get("insights"))
+
 # Graph State
 class GraphState(TypedDict):
+    # * NEW: Input and Output for the Agent Node
     messages: Sequence[BaseMessage]
     response: Sequence[BaseMessage]
+    
+    # Your already know how to do this:
     insights: str
     summary_table: str
     analysis_required: bool
@@ -302,6 +308,14 @@ pd.DataFrame(results.get("segmentation_data"))
 # * 2.4 MODULARIZE THE AGENT FOR THE MARKETING ANALYTICS TEAM
 
 from marketing_analytics_team.agents.customer_segmentation_agent import make_segment_analysis_agent
+
+# human message
+from langchain_core.messages import HumanMessage
+
+db_path = "sqlite:///data/database-sql-transactions/leads_scored_segmentation.db"
+model = "gpt-4.1-mini"  
+
+messages = [HumanMessage(content="Can you analyze the segments and provide insights?")]
 
 segment_analysis_agent = make_segment_analysis_agent(model=model, db_path=db_path)
 segment_analysis_agent
