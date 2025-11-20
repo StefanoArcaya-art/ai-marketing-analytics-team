@@ -55,6 +55,8 @@ X = customer_features[features]
 scaler = StandardScaler()
 X_scaled = scaler.fit_transform(X)
 
+pd.DataFrame(X_scaled, columns=features)
+
 # Apply K-Means clustering
 kmeans = KMeans(n_clusters=N_CLUSTERS, random_state=42)
 customer_features["segment"] = kmeans.fit_predict(X_scaled)

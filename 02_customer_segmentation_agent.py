@@ -36,6 +36,7 @@ from marketing_analytics_team.agents.utils import get_last_human_message
 # SETUP
 
 db_path = "sqlite:///data/database-sql-transactions/leads_scored_segmentation.db"
+
 model = "gpt-4.1-mini"  
 
 os.environ["OPENAI_API_KEY"] = yaml.safe_load(open('../credentials.yml'))['openai']
@@ -295,14 +296,22 @@ results['response']
 # Display the AI message response
 Markdown(results['response'][0].content)
 
-# Display the chart
-fig = pio.from_json(results['chart_json'])
-fig
+# Insights
+Markdown(results['insights'])
 
 # Display Summary Table
 Markdown(results['summary_table'])
 
-pd.DataFrame(results.get("segmentation_data"))
+# Segment Labels
+results['segment_labels']
+
+# Segment data
+pd.DataFrame(results['segmentation_data'])
+
+# Display the chart
+fig = pio.from_json(results['chart_json'])
+fig
+
 
 
 # * 2.4 MODULARIZE THE AGENT FOR THE MARKETING ANALYTICS TEAM
@@ -313,11 +322,11 @@ from marketing_analytics_team.agents.customer_segmentation_agent import make_seg
 from langchain_core.messages import HumanMessage
 
 db_path = "sqlite:///data/database-sql-transactions/leads_scored_segmentation.db"
-model = "gpt-4.1-mini"  
+model = "gpt-5-mini"  
 
 messages = [HumanMessage(content="Can you analyze the segments and provide insights?")]
 
-segment_analysis_agent = make_segment_analysis_agent(model=model, db_path=db_path)
+segment_analysis_agent = make_segment_analysis_agent(model=model, db_path=db_path, temperature=1)
 segment_analysis_agent
 
 segment_analysis_agent.get_input_jsonschema()['properties']

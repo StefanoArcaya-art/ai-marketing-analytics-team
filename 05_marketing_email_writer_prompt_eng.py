@@ -22,7 +22,7 @@ from IPython.display import Markdown
 from IPython.display import display, Image
 
 # Key Inputs
-MODEL = 'gpt-4.1-nano'
+MODEL = 'gpt-4.1-mini'
 
 os.environ["OPENAI_API_KEY"] = yaml.safe_load(open('../credentials.yml'))['openai']
 

@@ -422,13 +422,36 @@ result
 Markdown(result['messages'][-1].content)
 
 
+
 # * STEP 4: MODULARIZE THE APP
 
 from marketing_analytics_team.teams import make_marketing_analytics_team
 
 from langgraph.checkpoint.memory import MemorySaver
 
+from langchain_core.messages import HumanMessage
+
+import os
+import yaml
+
+from IPython.display import display, Image, Markdown
+
 checkpointer = MemorySaver()
+
+
+os.environ["OPENAI_API_KEY"] = yaml.safe_load(open('../credentials.yml'))['openai']
+
+# Key Inputs
+
+# MODEL = 'gpt-4.1-nano'
+MODEL = 'gpt-4.1-mini'
+
+EMBEDDINGS_MODEL = 'text-embedding-ada-002'
+
+PATH_PRODUCTS_VECTORDB = "data/data-rag-product-information/products_clean.db"
+
+PATH_TRANSACTIONS_DATABASE = "sqlite:///data/database-sql-transactions/leads_scored_segmentation.db"
+
 
 marketing_analytics_team = make_marketing_analytics_team(
     model=MODEL,
@@ -467,14 +490,14 @@ result['email_list']
 
 # TEST: Persistant Short Term Memory
 
-messages = [HumanMessage(content="Marketing Writer: Make sure to remove Kamryn Tremblay from the email list when you make the email list. Please return the results with Kamryn Tremblay removed.")]
+messages = [HumanMessage(content="Marketing Writer: Make sure to remove Mr. Dewitt Conroy from the email list when you make the email list. Please return the results with Mr. Dewitt Conroy removed.")]
 
 result = marketing_analytics_team.invoke(
     input = {"messages": messages},
     # * NEW: Add thread_id
     config = {
         "recursion_limit": 10,
-        "configurable": {"thread_id": "123"}
+        "configurable": {"thread_id": "124"}
     },
 )
 
