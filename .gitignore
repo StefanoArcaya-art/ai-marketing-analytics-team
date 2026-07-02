@@ -17,7 +17,7 @@ build/
 .AppleDouble
 
 # VS Code
-.vscode/settings.json
+.vscode/
 
 # Virtual environments
 .venv/
@@ -32,5 +32,5 @@ ENV/
 # Course challenges (not for public repo)
 challenges/
 
-# Streamlit secrets
-.streamlit/secrets.toml
+# Streamlit
+.streamlit/
