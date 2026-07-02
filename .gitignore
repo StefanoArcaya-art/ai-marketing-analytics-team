@@ -29,5 +29,8 @@ ENV/
 *.db-shm
 *.db-wal
 
+# Course challenges (not for public repo)
+challenges/
+
 # Streamlit secrets
 .streamlit/secrets.toml
