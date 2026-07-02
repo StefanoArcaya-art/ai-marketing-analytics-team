@@ -23,7 +23,7 @@ from langgraph.graph import StateGraph, START, END
 
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
-from typing import Sequence, TypedDict
+from typing_extensions import Sequence, TypedDict
 
 from marketing_analytics_team.agents.utils import get_last_human_message
 
@@ -34,7 +34,7 @@ PATH_PRODUCTS_VECTORDB = "data/data-rag-product-information/products_clean.db"
 
 # * AGENT CREATION
 def make_product_expert_agent(
-    model, model_embedding='text-embedding-ada-002', db_path=PATH_PRODUCTS_VECTORDB
+    model, model_embedding='text-embedding-ada-002', db_path=PATH_PRODUCTS_VECTORDB, temperature=1.0
 ):
     """
     Create a Product Expert Agent that can answer questions about products.
@@ -132,7 +132,7 @@ def make_product_expert_agent(
         
         return rag_chain
 
-    rag_agent = create_rag_agent(db_path=db_path, llm=model, temperature=0.7)
+    rag_agent = create_rag_agent(db_path=db_path, llm=model, temperature=temperature)
     
     # * CREATE AGENT LANGGRAPH WORKFLOW
     

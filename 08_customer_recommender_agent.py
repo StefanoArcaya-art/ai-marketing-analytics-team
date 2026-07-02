@@ -26,7 +26,7 @@ DB_PATH = "sqlite:///data/database-sql-transactions/leads_scored_segmentation.db
 MODEL = "gpt-4.1-mini"
 
 # Load API key (expects credentials.yml in repo root)
-os.environ["OPENAI_API_KEY"] = yaml.safe_load(open("../credentials.yml"))["openai"]
+os.environ["OPENAI_API_KEY"] = yaml.safe_load(open("credentials.yml"))["openai"]
 
 
 # --- Helper functions -------------------------------------------------------------------------

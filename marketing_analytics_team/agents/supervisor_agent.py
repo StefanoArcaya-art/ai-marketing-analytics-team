@@ -11,7 +11,7 @@ from langchain_openai import ChatOpenAI
 
 # LangGraph
 from langgraph.graph import StateGraph, START, END
-from typing import Sequence, TypedDict
+from typing_extensions import Sequence, TypedDict
 
 
 # * MARKETING ANALYTICS SUPERVISOR

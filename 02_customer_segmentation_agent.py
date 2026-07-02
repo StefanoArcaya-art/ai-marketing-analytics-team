@@ -39,7 +39,7 @@ db_path = "sqlite:///data/database-sql-transactions/leads_scored_segmentation.db
 
 model = "gpt-4.1-mini"  
 
-os.environ["OPENAI_API_KEY"] = yaml.safe_load(open('../credentials.yml'))['openai']
+os.environ["OPENAI_API_KEY"] = yaml.safe_load(open('credentials.yml'))['openai']
 
 llm = ChatOpenAI(model=model)
 
@@ -295,6 +295,8 @@ results['response']
 
 # Display the AI message response
 Markdown(results['response'][0].content)
+
+Markdown(results['response'])
 
 # Insights
 Markdown(results['insights'])

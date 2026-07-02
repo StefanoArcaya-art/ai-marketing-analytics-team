@@ -28,7 +28,7 @@ from IPython.display import display, Image
 MODEL = 'gpt-4.1-mini'
 PATH_CRM_DATABASE = "sqlite:///data/database-sql-transactions/leads_scored_segmentation.db"
 
-os.environ["OPENAI_API_KEY"] = yaml.safe_load(open('../credentials.yml'))['openai']
+os.environ["OPENAI_API_KEY"] = yaml.safe_load(open('credentials.yml'))['openai']
 
 # * STEP 1: MAKE THE BUSINESS INTELLIGENCE AGENT
 # Key Modifications:
@@ -76,6 +76,28 @@ dict(result['response'][0])['name']
 # * TEST: What is the average P1 probability of purchase by member rating? Return a scatter chart with the results.
 messages = [
     HumanMessage("What is the average P1 probability of purchase by member rating? Return a scatter chart with the results.")
+]
+
+result = business_intelligence_agent.invoke({"messages": messages})
+
+list(result.keys())
+
+# Summary
+Markdown(result['response'][0].content)
+
+pprint(result['response'][0].content)
+
+# SQL Query
+pprint(result['sql_query'])
+
+# Plotly Chart
+result['chart_plotly_json']
+
+pio.from_json(result['chart_plotly_json'])
+
+
+messages = [
+    HumanMessage("What is the max P1 probability of purchase by member rating? Return a scatter chart with the results.")
 ]
 
 result = business_intelligence_agent.invoke({"messages": messages})

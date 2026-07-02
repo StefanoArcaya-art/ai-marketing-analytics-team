@@ -21,14 +21,14 @@ import plotly.io as pio
 
 from pprint import pprint
 
-from typing import Sequence, TypedDict
+from typing_extensions import Sequence, TypedDict
 
 from marketing_analytics_team.agents.utils import get_last_human_message
 from marketing_analytics_team.agents.utils import SQLOutputParser, PythonOutputParser
 
 # KEY INPUTS
 
-def make_business_intelligence_agent(model, db_path):    
+def make_business_intelligence_agent(model, db_path, temperature=0.0):    
     
     # Handle case when users want to make a different model than ChatOpenAI
     if isinstance(model, str):
@@ -38,7 +38,7 @@ def make_business_intelligence_agent(model, db_path):
     
     PATH_DB = db_path
     
-    llm.temperature = 0
+    llm.temperature = temperature
     
     # * Routing Preprocessor Agent
     #   * NEW: CONTEXT "chat_history" added to the prompt
@@ -92,6 +92,27 @@ def make_business_intelligence_agent(model, db_path):
         Pay attention to use only the column names you can see in the tables below. Be careful to not query for columns that do not exist. Also, pay attention to which column is in which table.
         
         Pay attention to use date(\'now\') function to get the current date, if the question involves "today".
+        
+        SQLite does not provide a MEDIAN aggregate. If the user asks for a median, compute it manually by using window functions. 
+        Use a pattern such as:
+        WITH ordered_data AS (
+            SELECT
+                grouping_columns,
+                value_column,
+                ROW_NUMBER() OVER (PARTITION BY grouping_columns ORDER BY value_column) AS row_num,
+                COUNT(*) OVER (PARTITION BY grouping_columns) AS total_count
+            FROM table_name
+        )
+        SELECT
+            grouping_columns,
+            AVG(value_column) AS median_value
+        FROM ordered_data
+        WHERE row_num IN (
+            CAST((total_count + 1) / 2 AS INT),
+            CAST((total_count + 2) / 2 AS INT)
+        )
+        GROUP BY grouping_columns;
+        This logic averages the two middle values when a partition has an even number of rows and selects the single middle value when it has an odd number of rows.
             
         Only use the following tables:
         {table_info}
@@ -228,8 +249,11 @@ def make_business_intelligence_agent(model, db_path):
         """
         Represents the state of our graph.
         """
+        # * NEW FIELDS
         messages: Sequence[BaseMessage] # NEW - list that holds the chat history
         response: Sequence[BaseMessage] # NEW - list that holds the agent's response
+        
+        
         user_question: str
         formatted_user_question_sql_only: str
         sql_query : str
@@ -239,6 +263,8 @@ def make_business_intelligence_agent(model, db_path):
         chart_plotly_code: str
         chart_plotly_json: dict
         chart_plotly_error: bool
+        
+        # * NEW FIELD
         summary: str # NEW - summary of the analysis results
         
     def preprocess_routing(state):
@@ -253,7 +279,11 @@ def make_business_intelligence_agent(model, db_path):
             last_human_question = last_human_question.content
         
         # Chart Routing and SQL Prep
-        response = routing_preprocessor.invoke({"initial_question": last_human_question, "chat_history": messages})
+        # * NEW: Pass chat_history to the routing preprocessor
+        response = routing_preprocessor.invoke({
+            "initial_question": last_human_question, 
+            "chat_history": messages
+        })
         
         # print("formatted user question sql only:")
         # pprint(response['formatted_user_question_sql_only'])

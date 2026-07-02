@@ -25,7 +25,7 @@ MODEL = 'gpt-4.1-mini'
 EMBEDDING = 'text-embedding-ada-002'
 PATH_VECTORDB = "data/data-rag-product-information/products_clean.db"
 
-os.environ["OPENAI_API_KEY"] = yaml.safe_load(open('../credentials.yml'))['openai']
+os.environ["OPENAI_API_KEY"] = yaml.safe_load(open('credentials.yml'))['openai']
 
 
 # * STEP 1: MAKE THE RAG AGENT

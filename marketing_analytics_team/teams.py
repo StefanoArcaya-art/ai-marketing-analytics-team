@@ -25,7 +25,7 @@ from langgraph.checkpoint.memory import MemorySaver
 
 # * TEAM CREATION
 
-def make_marketing_analytics_team(model, model_embedding, path_products_vector_db, path_transactions_sql_db, checkpointer = None):
+def make_marketing_analytics_team(model, model_embedding, path_products_vector_db, path_transactions_sql_db, checkpointer = None, temperature=1.0):
     """
     Create a AI Marketing Analytics Team with the following sub-agents:
     1. Product Expert Agent
@@ -62,14 +62,14 @@ def make_marketing_analytics_team(model, model_embedding, path_products_vector_d
         
     # * CREATE SUPERVISOR
         
-    supervisor_agent = make_marketing_analytics_supervisor_agent(model=llm, temperature=0.7)
+    supervisor_agent = make_marketing_analytics_supervisor_agent(model=llm, temperature=temperature)
         
     # * CREATE SUB AGENTS
     
     segment_analysis_agent = make_segment_analysis_agent(
         model=model,
         db_path=path_transactions_sql_db,
-        temperature=0.7
+        temperature=temperature
     )
     
     product_expert_agent = make_product_expert_agent(
@@ -82,7 +82,7 @@ def make_marketing_analytics_team(model, model_embedding, path_products_vector_d
         model=llm, db_path=path_transactions_sql_db
     )
     
-    marketing_agent = make_marketing_email_writer_agent(model=llm)
+    marketing_agent = make_marketing_email_writer_agent(model=llm, temperature=temperature)
     
     # * LANGGRAPH
 

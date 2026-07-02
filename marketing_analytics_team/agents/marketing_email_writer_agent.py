@@ -15,7 +15,7 @@ from langchain_core.messages import BaseMessage, AIMessage
 
 from langgraph.graph import StateGraph, START, END
 
-from typing import Sequence, TypedDict
+from typing_extensions import Sequence, TypedDict
 
 from marketing_analytics_team.agents.utils import get_last_human_message
 

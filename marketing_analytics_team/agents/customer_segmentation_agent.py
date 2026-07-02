@@ -1,6 +1,8 @@
 # BUSINESS SCIENCE
 # This file is part of the Business Science Customer Segmentation Agent Challenge.
 
+import os
+from pathlib import Path
 from typing import Dict, Any, Sequence
 import pandas as pd
 from sqlalchemy import create_engine
@@ -11,9 +13,30 @@ from langchain_core.messages import BaseMessage, AIMessage
 from langgraph.graph import StateGraph, START, END
 from typing import Sequence, TypedDict
 import plotly.express as px
+import yaml
 from marketing_analytics_team.agents.utils import get_last_human_message
 
-db_path = "sqlite:///challenges/data/database-sql-transactions/leads_scored_segmentation.db"
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+CREDENTIALS_PATH = PROJECT_ROOT / "credentials.yml"
+DEFAULT_DB_FILE = PROJECT_ROOT / "data/database-sql-transactions/leads_scored_segmentation.db"
+DEFAULT_DB_URL = f"sqlite:///{DEFAULT_DB_FILE}"
+
+if not os.environ.get("OPENAI_API_KEY"):
+    if not CREDENTIALS_PATH.exists():
+        raise RuntimeError(
+            "OPENAI_API_KEY is not set and credentials.yml could not be found. "
+            "Set the environment variable manually or place credentials.yml at the project root."
+        )
+    with open(CREDENTIALS_PATH) as cred_file:
+        os.environ["OPENAI_API_KEY"] = yaml.safe_load(cred_file)["openai"]
+
+if not DEFAULT_DB_FILE.exists():
+    raise RuntimeError(
+        "Default segmentation database not found at "
+        f"{DEFAULT_DB_FILE}. Verify the data directory or pass a custom db_path."
+    )
+
+db_path = DEFAULT_DB_URL
 
 
 def make_segment_analysis_agent(model, db_path, temperature=0):
@@ -223,7 +246,7 @@ if __name__ == "__main__":
     
     # Example usage
     model = "gpt-4.1-nano"
-    db_path = "sqlite:///challenges/data/database-sql-transactions/leads_scored_segmentation.db"
+    db_path = DEFAULT_DB_URL
     temperature = 0.7
 
     agent = make_segment_analysis_agent(model, db_path, temperature)

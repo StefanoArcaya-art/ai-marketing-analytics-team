@@ -47,7 +47,7 @@ from marketing_analytics_team.agents.customer_segmentation_agent import make_seg
 
 # API Keys
 
-os.environ["OPENAI_API_KEY"] = yaml.safe_load(open('../credentials.yml'))['openai']
+os.environ["OPENAI_API_KEY"] = yaml.safe_load(open('credentials.yml'))['openai']
 
 # Key Inputs
 
@@ -439,7 +439,7 @@ from IPython.display import display, Image, Markdown
 checkpointer = MemorySaver()
 
 
-os.environ["OPENAI_API_KEY"] = yaml.safe_load(open('../credentials.yml'))['openai']
+os.environ["OPENAI_API_KEY"] = yaml.safe_load(open('credentials.yml'))['openai']
 
 # Key Inputs
 

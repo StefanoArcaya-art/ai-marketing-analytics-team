@@ -24,7 +24,7 @@ from IPython.display import display, Image
 # Key Inputs
 MODEL = 'gpt-4.1-mini'
 
-os.environ["OPENAI_API_KEY"] = yaml.safe_load(open('../credentials.yml'))['openai']
+os.environ["OPENAI_API_KEY"] = yaml.safe_load(open('credentials.yml'))['openai']
 
 # * STEP 1: MAKE THE MARKETING COPY WRITER AGENT
 #   * NEW: Refer to marketing_analytics_team.agents.marketing_email_writer_agent

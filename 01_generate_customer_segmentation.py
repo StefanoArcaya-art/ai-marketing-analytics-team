@@ -86,6 +86,8 @@ conn.close()
 
 leads_scored["segment"].value_counts().sort_index()
 
+leads_scored
+
 # * CONCLUSIONS
 # - We have NOT done any AI. 
 # - We have created customer segments using K-Means clustering based on purchase frequency, lead score (p1), and engagement rating (member_rating).
